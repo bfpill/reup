@@ -7,10 +7,11 @@ import { Providers } from "@/components/providers";
 import clsx from "clsx";
 import { Inter } from "next/font/google";
 import { usePathname } from "next/navigation"; // Import usePathname
-
+import { Analytics } from "@vercel/analytics/react"
 // export const metadata: Metadata = {
 //   ...OpenGraph,
 // };
+
 
 const inter = Inter({
   subsets: ["latin"],
@@ -34,6 +35,7 @@ export default function RootLayout({
             <article className="article">{children}</article>
           </main>
         </Providers>
+        <Analytics/>
       </body>
     </html>
   );

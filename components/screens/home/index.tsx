@@ -5,6 +5,8 @@ import { Footer } from "@/components/footer";
 import * as FadeIn from "@/components/motion/staggers/fade";
 import { Posts } from "@/components/posts";
 
+import { Analytics } from "@vercel/analytics/react"
+
 const Spacer = () => <div style={{ marginTop: "24px" }} />;
 
 export default function Home() {
@@ -37,6 +39,7 @@ export default function Home() {
           <Footer />
         </FadeIn.Item>
       </FadeIn.Container>
+      <Analytics />
     </div>
   );
 }
