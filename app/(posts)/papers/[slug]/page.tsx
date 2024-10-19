@@ -46,8 +46,8 @@ export default function Page({ params }: PageProps) {
   }
 
   return (
-    <div className="absolute top-0 left-0 flex w-screen items-center justify-center bg-[#EAF3FF]">
-      <div className="h-full w-3/5 min-w-[1000px] overflow-y-auto border ">
+    <div className="absolute top-0 -left-2 flex w-screen items-center justify-center bg-[#EAF3FF] pt-20 md:pt-0">
+      <div className="h-full min-w-[300px] md:min-w-[1000px] overflow-y-auto border-0 md:border">
         <div className="absolute top-10 left-10">
           <Breadcrumb />
         </div>
@@ -55,11 +55,7 @@ export default function Page({ params }: PageProps) {
           <div className="flex h-screen flex-col">
             <iframe
               src="https://bfpill.vercel.app/writing/papers/A%20Contrastive%20Analysis%20of%20Features%20in%20Twin%20Toy%20Transformers%20that%20(play)%20Chess"
-              style={{
-                width: "100%",
-                height: "100%",
-                border: "none",
-              }}
+              className="h-full w-full border-none"
               title="Embedded Page"
             />
           </div>
