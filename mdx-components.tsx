@@ -15,6 +15,14 @@ import rehypePrettyCode from "rehype-pretty-code";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
 
+const lora = Lora({
+  subsets: ["latin"],
+  display: "swap",
+});
+
+import { Lora } from "next/font/google";
+
+
 const components: MDXComponents = {
   PreviewExample: () => {
     return (
@@ -31,21 +39,36 @@ const components: MDXComponents = {
   },
   Preview: ({ children, codeblock }) => <Preview codeblock={codeblock ? codeblock : undefined}>{children}</Preview>,
   Image: ({ caption, alt, ...props }) => <MDXImage {...props} caption={caption} alt={alt} />,
+  h1: ({ children, id }: React.HTMLAttributes<HTMLHeadingElement>) => {
+    if (id?.includes("footnote-label")) {
+      return null;
+    }
+    return <h1 className="text-3xl font-lora" id={id}>{children}</h1>;
+  },
   h2: ({ children, id }: React.HTMLAttributes<HTMLHeadingElement>) => {
     if (id?.includes("footnote-label")) {
       return null;
     }
-    return <h2 id={id}>{children}</h2>;
+    return <h2 className="text-gray-200" id={id}>{children}</h2>;
+  },
+  h3: ({ children, id }: React.HTMLAttributes<HTMLHeadingElement>) => {
+    if (id?.includes("footnote-label")) {
+      return null;
+    }
+    return <h3 className="text-gray-300 italic" id={id}>{children}</h3>;
   },
   a: ({ children, href }) => {
     if (href?.startsWith("#user-content-fn-")) {
       return <FootnoteForwardReference href={href}>{children}</FootnoteForwardReference>;
     }
     return (
-      <Link href={href} className="inline-flex items-center gap-1 text-muted" underline>
+      <Link href={href} className="inline-flex items-center gap-1 text-muted text-blue-400" underline>
         {children}
       </Link>
     );
+  },
+  em: ({ children, className, ...props }: React.HTMLAttributes<HTMLElement>) => {
+    return <span className="italic text-gray-400">{children}</span>;
   },
   blockquote: ({ className, ...props }: React.HTMLAttributes<HTMLElement>) => (
     <blockquote className={cn("mt-6 border-gray-4 border-l-2 pl-6 text-muted", className)} {...props} />

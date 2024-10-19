@@ -1,0 +1,609 @@
+---
+title: "Comparative Analysis: Patricia Tree vs. Linked List"
+time:
+  created: "2024-04-17T09:56:06.854Z"
+  updated: "2024-04-17T09:56:06.854Z"
+---
+# Comparative Analysis: Patricia Tree vs. Linked List
+
+This report presents a comparative analysis of two data structures, the Patricia tree and the linked list, focusing on their performance across different operations such as insertion, query processing, and spellcheck. We provide both theoretical expectations and empirical results from tests on various datasets, including DNA-like sequences and the 'Australian Suburb' dataset. By examining bit comparisons, execution time, and scalability, we aim to highlight the strengths and limitations of each structure for specific use cases, ultimately guiding the choice between the Patricia tree and linked list based on application needs.
+
+## Notes on Implementation
+
+Our Patricia tree implementation focuses on optimizing bit-level comparisons during node traversal while limiting unnecessary operations. We increment the bit comparison counter whenever a direct comparison between bits occurs, such as when traversing nodes or matching prefixes. For example, bit comparisons are counted in the spellcheck process during prefix matching and in the core traversal logic when comparing the query string with the tree's prefixes. However, *we avoid counting comparisons when they don't involve active searching or decision-making*, like when allocating memory or copying strings. This selective counting ensures that our metrics reflect meaningful computational work.
+
+In our Patricia tree implementation, we store linked lists at each node to manage duplicate data, allowing multiple records to be associated with the same prefix. When a new record is inserted into a node that already exists, we append the data to the linked list instead of overwriting it.
+
+For prefix matching during spellchecking, we use the `min_edit_dist` function to compute the edit distance between the query string and node prefixes. We decided to count *n×m×16* comparisons here, where *n* is the length of the query string and *m* is the length of the node's prefix. This reflects the bit-level comparison overhead for each character in both strings. We compare the performance of spellchecking and non-spellchecking versions in the report.
+
+Finally, when counting comparisons between strings in our linked list implementation, we use a custom string comparison function to ensure we record all bit level comparisons. We do not call `strlen()`, as that requires *n* reads for an n length string, and read 32 bits per string per iteration of comparing characters.
+
+## Theoretical Expectations
+
+### Patricia Tree
+
+![Patricia Tree Table](/images/dsa_a2/patricia_tree_table.png)
+
+### Linked List
+
+![Linked List Table](/images/dsa_a2/ll_table.png)
+
+The sub-linear growth rate of the Patricia tree compared to the linked list’s linear behavior can be attributed to their structural differences. The Patricia tree organizes data in a trie-like structure, allowing for efficient traversal by compressing common prefixes, reducing the number of comparisons needed for large datasets. As a result, the search time depends more on the depth of the tree rather than the total number of entries, leading to a logarithmic relationship with dataset size. In contrast, the linked list requires linear traversal through all elements, making each query dependent on the total number of nodes, which directly results in **O(n)** behavior. This structural advantage of the Patricia tree enables faster searches and insertions, especially as datasets grow larger.
+
+Now we will turn to an empirical performance comparison, starting with small query sizes to observe how each structure behaves in practice.
+
+## Performance Comparison on Small Query Sizes
+
+To visualize and compare the performance characteristics of both implementations we graph both the bit comparison growth rate and node access growth rate of the _Linked List_ and the _Spellchecking Patricia Tree_ at small query sizes.
+
+Figure 1 compares the number of bit comparisons on different test sizes for the Patricia tree and the linked list on a log plot. We see the Patricia tree comparisons grow slower than the linked list but have a larger constant factor that makes it less efficient on smaller datasets.
+
+**Figure 1.**
+
+![Bit Comparisons Log](/images/dsa_a2/bit_comparisons_log.png)
+
+Figure 2 shows both node and string comparisons. The Patricia tree generally performs fewer node comparisons due to its tree structure, while the linked list may have higher string comparison counts due to its linear search nature. Note that the Patricia tree does not make any string comparisons - this is because the implementation compares only using prefixes even when searching through child nodes in the case of a 'spellcheck' in the key.
+
+**Figure 2.**
+
+![Node String Comparisons Log](/images/dsa_a2/node_string_comparisons_log.png)
+
+## Performance Comparison on Large Query Sizes (Log-Log)
+
+As query sizes increase, we can better observe how each algorithm performs at scale. In this section, we again compare the performance of the _Linked List_ and _Spellchecking Patricia Tree_. Starting from the 4th test, query sizes are doubled iteratively. We use a log-log scale to analyze the data. The results closely match our theoretical predictions.
+
+In Figure 3, the **Patricia tree** demonstrates sub-linear execution time growth with a slope around 0.78, indicating efficient scalability. In contrast, the linked list has a slope of **0.94**, closely matching **O(n)** behavior. At a query size of 164,864, the linked list took an average of **27.34 seconds** per query, while the Patricia tree only took **7.32 seconds** (n=25). This significant difference underscores the Patricia tree's advantage in handling larger datasets.
+
+**Figure 3.**
+
+![Execution Time Comparison Log-Log](/images/dsa_a2/execution_time_comparison_log_log.png)
+
+In Figure 4, the Patricia tree exhibits logarithmic growth in bit comparisons, as predicted in the theoretical expectations section.
+
+**Figure 4.**
+
+![Bit Comparisons Log-Log](/images/dsa_a2/bit_comparisons_log_log1.png)
+
+## Spellcheck vs Default Patricia Tree
+
+The implementation of the spellcheck feature in the Patricia tree structure resulted in a significant increase in computational operations, particularly in bit comparisons, while maintaining relatively efficient overall performance.
+
+Figure 5 revealed that the spellcheck version performed, on average, 2501.86% more bit comparisons than the non-spellcheck version, indicating a substantial increase in low-level operations. Figure 6 showed spell-checking marginally increased node and string comparisons on small tests sizes, however this discrepancy diminished as test size increased.
+
+**Figure 5.**
+
+![Bit Comparisons Spellcheck Log-Log](/images/dsa_a2/bit_comparisons_spellcheck_log_log.png)
+
+**Figure 6.**
+
+![Node String Comparisons Spellcheck Log](/images/dsa_a2/node_string_comparisons_spellcheck_log.png)
+
+Despite the constant factor increases in bit comparison operations, Figure 7 shows that the overall execution time did not change significantly. This disparity between the increase in comparisons and the minimal impact on execution time suggests that the spellcheck feature, while computationally intensive at the bit level, is well-optimized within the broader context of the algorithm.
+
+**Figure 7.**
+
+![Execution Time Comparison Spellcheck Log-Log](/images/dsa_a2/execution_time_comparison_spellcheck_log_log.png)
+
+## Does Having More Common Prefixes Decrease Query Time?
+
+In order to better test the performance characteristics of the Patricia tree, we generated a custom dataset using DNA-like sequences which consist of a small alphabet (A, C, G, T) and often share long common prefixes. We hypothesized this property may be an ideal fit for the Patricia tree data structure.
+
+Our dummy dataset generator created 5,000 entries, each with a unique "Official Name Suburb" field containing a DNA-like sequence of 10 to 20 characters. We then tested both data structures with this dataset in both sorted and unsorted configurations. The sorting was based on the DNA sequence field. _(See Appendix for an example of a Patricia Tree with DNA sequence keys)_
+
+First, to benchmark on unsorted data, Figure 8 shows bit comparisons on the DNA_dataset, again using a log-log plot and doubling our query size at each step along the x axis.
+
+**Figure 8.**
+
+![Bit Comparisons Log-Log](/images/dsa_a2/bit_comparisons_log_log.png)
+
+_(Please ignore the drop off at the end, we (I) ran out of memory or something and these take a very long time to run)_
+
+Plotting execution time, the **Patricia tree** again shows sub-linear growth, with a slope of approximately 0.73, indicating slightly more efficient scaling than on the _'Australian Suburbs'_ Dataset (0.78). The Linked List shows a slope of 1.04, which is closely aligned to linear behaviour _but is significantly worse scaling than on the _'Australian Suburbs'_ dataset (0.93). For a query size of 164,864, the linked list took an average of *15.19* seconds per query, while the Patricia tree handled the same queries in just *4.36* seconds (n=25). These queries are significantly faster than on the Suburbs Dataset.
+
+### Sorted vs Unsorted Insertions
+
+Both the Patricia tree and linked list show very little variation in execution time and total comparisons when run on sorted vs unsorted versions of the *Australian Suburb* Dataset (Figure 9), or the custom _DNA_ Dataset (Figure 10).
+
+**Figure 9.**
+
+![Execution Time Comparison Log-Log Sorted vs Unsorted](/images/dsa_a2/execution_time_comparison_log_log_sorted_vs_unsorted.png)
+
+However, sorting the data before constructing tree/linked list did not have any effect on comparisons. As seen in Figure 10, execution times for both the Patricia tree and linked list remain relatively consistent between sorted and unsorted DNA data across various query counts.
+
+**Figure 10.**
+
+![Bit Comparisons Log-Log Sorted vs Unsorted](/images/dsa_a2/bit_comparisons_log_log_sorted_vs_unsorted 1.png)
+
+Similarly, in Figure 11, both the Patricia tree and linked list show very little variation of in execution time and total comparisons when run on sorted vs unsorted DNA data.
+
+**Figure 11.**
+
+![DNA Execution Time Comparison Log-Log Sorted vs Unsorted](/images/dsa_a2/dna_execution_time_comparison_log_log_sorted_vs_unsorted.png)
+
+## Profiling Analysis: Patricia Tree vs. Linked List
+
+Using Callgrind and KCachegrind, we analyzed the performance characteristics of our Patricia tree and linked list implementations.
+
+### Patricia Tree Call Graph (Figure 12)
+
+![Patricia Tree Call Graph](/images/dsa_a2/PatTighter.png)
+
+1. Insert Function (`patricia_tree_insert`):
+    - Percentage of total execution time: 35%
+
+2. Query Function (`patricia_tree_query`):
+    - Percentage of total execution time: 15.85%
+    - Number of calls: 91 (Once per query)
+    - Bulk of time is taken up by `get_min_edit_dist_node` (Called only when needing to prefix match a misspelling)
+
+3. Memory Free (`free_patricia_tree`):
+    - Percentage of total execution time: 11.42%
+    - Recursively Called: 3686 times
+    - Memory Free (`free_list`):
+        - Percentage of total execution time: 8.62%
+        - Number of calls: 1843
+
+### Linked List Call Graph (Figure 13)
+
+![Linked List Call Graph](/images/dsa_a2/TighterLL.png)
+
+1. Insert Function (`push_to_tail`):
+    - Percentage of total execution time: negligible
+    - Didn't even show up on call graph
+
+2. Query Function (`query_and_output_count`):
+    - Percentage of total execution time: 64%
+    - Number of calls: 91 (Once per query)
+    - Takes up _much_ more time than the Patricia Tree
+
+3. Memory Free (`free_list`):
+    - Percentage of total execution time: 7.59%
+    - Number of calls: 1000 (Once per query)
+
+Notably, the Patricia tree implementation involves more memory allocation and deallocation operations. Notice the presence of malloc (11.51%) and free (7.55%) in the Patricia tree graph, which are more prominent than in the linked list implementation. This space-time trade-off might explain why execution time differences between the linked list and Ptree are perhaps closer than expected.
+
+## Conclusion
+
+The Patricia tree and linked list implementations each have their strengths and weaknesses:
+
+- The Patricia tree offers superior search performance and scalability, making it well-suited for large datasets with frequent search operations. Its efficient handling of prefixes also makes it ideal for applications involving string matching or autocomplete functionality.
+
+- The linked list provides simplicity, ease of implementation, and efficient insertion. It may be preferable for smaller datasets or scenarios where frequent insertions are more common than searches.
+
+The choice between these data structures depends on the specific requirements of the application:
+
+- For large datasets with frequent search operations, the Patricia tree's logarithmic search time offers a significant advantage.
+- For applications prioritizing simplicity and frequent insertions, the linked list may be more appropriate.
+- Sorting the input data does not affect the growth or efficiency of querying a Patricia tree or a linked list.
+
+In scenarios requiring a balance between search efficiency and implementation simplicity, hybrid approaches or alternative data structures (like hash tables or balanced search trees) might be worth considering.
+
+The performance graphs clearly illustrate the Patricia tree's advantage in terms of execution time and comparison counts for larger datasets. However, for very small datasets, the differences are less pronounced, and the simpler linked list is sufficient.
+
+## Appendix
+
+### Correctness Check: Patricia Tree Print Function
+
+In order to ensure correctness of the Patricia tree we (I), wrote a function that recursively prints the tree and the prefix at each node. Here are some sample prints of tree's built on datasets read in-order. Prefixes are shown in ASCII when the node has a proper set of ASCII characters.
+
+#### `dataset_15.csv`
+
+
+`dataset_15.csv`
+```python
+Patricia Tree:
+└(3 bits) [Depth: 0]
+        ASCII: ''
+    ├(1 bits) [Depth: 1]
+    │       ASCII: ''
+    │   ├(1 bits) [Depth: 2]
+    │   │       ASCII: ''
+    │   │   ├(51 bits) [Depth: 3]
+    │   │   │       ASCII: 'Carlton'
+    │   │   │   └(48 bits) [Depth: 4]
+    │   │   │           ASCII: 'Carlton North'
+    │   │   └(1 bits) [Depth: 3]
+    │   │           ASCII: ''
+    │   │       ├(1 bits) [Depth: 4]
+    │   │       │       ASCII: ''
+    │   │       │   ├(65 bits) [Depth: 5]
+    │   │       │   │       ASCII: 'Docklands'
+    │   │       │   └(105 bits) [Depth: 5]
+    │   │       │           ASCII: 'East Melbourne'
+    │   │       └(74 bits) [Depth: 4]
+    │   │               ASCII: 'Flemington'
+    │   └(1 bits) [Depth: 2]
+    │           ASCII: ''
+    │       ├(75 bits) [Depth: 3]
+    │       │       ASCII: 'Kensington'
+    │       └(1 bits) [Depth: 3]
+    │               ASCII: ''
+    │           ├(66 bits) [Depth: 4]
+    │           │       ASCII: 'Melbourne'
+    │           └(114 bits) [Depth: 4]
+    │                   ASCII: 'North Melbourne'
+    └(2 bits) [Depth: 1]
+            ASCII: ''
+        ├(1 bits) [Depth: 2]
+        │       ASCII: ''
+        │   ├(6 bits) [Depth: 3]
+        │   │       ASCII: 'P'
+        │   │   ├(60 bits) [Depth: 4]
+        │   │   │       ASCII: 'Parkville'
+        │   │   └(100 bits) [Depth: 4]
+        │   │           ASCII: 'Port Melbourne'
+        │   └(35 bits) [Depth: 3]
+        │           ASCII: 'South'
+        │       ├(11 bits) [Depth: 4]
+        │       │       ASCII: 'South '
+        │       │   ├(36 bits) [Depth: 5]
+        │       │   │       ASCII: 'South Wharf'
+        │       │   └(36 bits) [Depth: 5]
+        │       │           ASCII: 'South Yarra'
+        │       └(31 bits) [Depth: 4]
+        │               ASCII: 'Southbank'
+        └(7 bits) [Depth: 2]
+                ASCII: 'W'
+            ├(100 bits) [Depth: 3]
+            │       ASCII: 'West Melbourne'
+            └(44 bits) [Depth: 3]
+                    ASCII: 'Windsor'
+
+```
+
+`dna_dataset_tiny.csv`
+```python
+Patricia Tree:
+└(3 bits) [Depth: 0]
+        ASCII: ''
+    ├(2 bits) [Depth: 1]
+    │       ASCII: ''
+    │   ├(1 bits) [Depth: 2]
+    │   │       ASCII: ''
+    │   │   ├(5 bits) [Depth: 3]
+    │   │   │       ASCII: 'A'
+    │   │   │   ├(2 bits) [Depth: 4]
+    │   │   │   │       ASCII: 'A'
+    │   │   │   │   ├(1 bits) [Depth: 5]
+    │   │   │   │   │       ASCII: 'A'
+    │   │   │   │   │   ├(122 bits) [Depth: 6]
+    │   │   │   │   │   │       ASCII: 'AAGAATAATCCAATCTA'
+    │   │   │   │   │   └(7 bits) [Depth: 6]
+    │   │   │   │   │           ASCII: 'AC'
+    │   │   │   │   │       ├(67 bits) [Depth: 7]
+    │   │   │   │   │       │       ASCII: 'ACCTGAGGGGC'
+    │   │   │   │   │       └(131 bits) [Depth: 7]
+    │   │   │   │   │               ASCII: 'ACGAAAGTTAGTACGCTTT'
+    │   │   │   │   └(6 bits) [Depth: 5]
+    │   │   │   │           ASCII: 'AG'
+    │   │   │   │       ├(8 bits) [Depth: 6]
+    │   │   │   │       │       ASCII: 'AGG'
+    │   │   │   │       │   ├(117 bits) [Depth: 7]
+    │   │   │   │       │   │       ASCII: 'AGGCGACGAGCTAGATTA'
+    │   │   │   │       │   └(8 bits) [Depth: 7]
+    │   │   │   │       │           ASCII: 'AGGT'
+    │   │   │   │       │       ├(93 bits) [Depth: 8]
+    │   │   │   │       │       │       ASCII: 'AGGTGTCGAATTTTAC'
+    │   │   │   │       │       └(93 bits) [Depth: 8]
+    │   │   │   │       │               ASCII: 'AGGTTTGTTGGACAAA'
+    │   │   │   │       └(69 bits) [Depth: 6]
+    │   │   │   │               ASCII: 'AGTCTCAAGAG'
+    │   │   │   └(149 bits) [Depth: 4]
+    │   │   │           ASCII: 'ATCTTGGTAGCCTCTGGTTA'
+    │   │   └(5 bits) [Depth: 3]
+    │   │           ASCII: 'C'
+    │   │       ├(2 bits) [Depth: 4]
+    │   │       │       ASCII: 'C'
+    │   │       │   ├(1 bits) [Depth: 5]
+    │   │       │   │       ASCII: 'C'
+    │   │       │   │   ├(8 bits) [Depth: 6]
+    │   │       │   │   │       ASCII: 'CA'
+    │   │       │   │   │   ├(114 bits) [Depth: 7]
+    │   │       │   │   │   │       ASCII: 'CAAGGATTGCGTTTGTG'
+    │   │       │   │   │   └(58 bits) [Depth: 7]
+    │   │       │   │   │           ASCII: 'CACTGCCCCC'
+    │   │       │   │   └(98 bits) [Depth: 6]
+    │   │       │   │           ASCII: 'CCCGCATCAGACCC'
+    │   │       │   └(6 bits) [Depth: 5]
+    │   │       │           ASCII: 'CG'
+    │   │       │       ├(3 bits) [Depth: 6]
+    │   │       │       │       ASCII: 'CG'
+    │   │       │       │   ├(5 bits) [Depth: 7]
+    │   │       │       │   │       ASCII: 'CGA'
+    │   │       │       │   │   ├(53 bits) [Depth: 8]
+    │   │       │       │   │   │       ASCII: 'CGAAGCTGCG'
+    │   │       │       │   │   └(77 bits) [Depth: 8]
+    │   │       │       │   │           ASCII: 'CGATACAATTAGA'
+    │   │       │       │   └(5 bits) [Depth: 7]
+    │   │       │       │           ASCII: 'CGC'
+    │   │       │       │       ├(125 bits) [Depth: 8]
+    │   │       │       │       │       ASCII: 'CGCGTCACAACCAAGTGCC'
+    │   │       │       │       └(69 bits) [Depth: 8]
+    │   │       │       │               ASCII: 'CGCTCAACTGGC'
+    │   │       │       └(10 bits) [Depth: 6]
+    │   │       │               ASCII: 'CGT'
+    │   │       │           ├(83 bits) [Depth: 7]
+    │   │       │           │       ASCII: 'CGTCCTCGGATCAC'
+    │   │       │           └(91 bits) [Depth: 7]
+    │   │       │                   ASCII: 'CGTGCCAAAGTGTCC'
+    │   │       └(8 bits) [Depth: 4]
+    │   │               ASCII: 'CT'
+    │   │           ├(2 bits) [Depth: 5]
+    │   │           │       ASCII: 'CT'
+    │   │           │   ├(1 bits) [Depth: 6]
+    │   │           │   │       ASCII: 'CT'
+    │   │           │   │   ├(122 bits) [Depth: 7]
+    │   │           │   │   │       ASCII: 'CTAGTGAGTAAGAAGCAT'
+    │   │           │   │   └(5 bits) [Depth: 7]
+    │   │           │   │           ASCII: 'CTC'
+    │   │           │   │       ├(101 bits) [Depth: 8]
+    │   │           │   │       │       ASCII: 'CTCGGGCTGAGTCGCG'
+    │   │           │   │       └(101 bits) [Depth: 8]
+    │   │           │   │               ASCII: 'CTCTCACGGTCAATAT'
+    │   │           │   └(91 bits) [Depth: 6]
+    │   │           │           ASCII: 'CTGAAATATAACCA'
+    │   │           └(61 bits) [Depth: 5]
+    │   │                   ASCII: 'CTTGCAAGGT'
+    │   └(6 bits) [Depth: 2]
+    │           ASCII: 'G'
+    │       ├(2 bits) [Depth: 3]
+    │       │       ASCII: 'G'
+    │       │   ├(1 bits) [Depth: 4]
+    │       │   │       ASCII: 'G'
+    │       │   │   ├(5 bits) [Depth: 5]
+    │       │   │   │       ASCII: 'GA'
+    │       │   │   │   ├(2 bits) [Depth: 6]
+    │       │   │   │   │       ASCII: 'GA'
+    │       │   │   │   │   ├(91 bits) [Depth: 7]
+    │       │   │   │   │   │       ASCII: 'GAATGACCATACTG'
+    │       │   │   │   │   └(67 bits) [Depth: 7]
+    │       │   │   │   │           ASCII: 'GAGGGGTCCAA'
+    │       │   │   │   └(61 bits) [Depth: 6]
+    │       │   │   │           ASCII: 'GATGGAAAGT'
+    │       │   │   └(5 bits) [Depth: 5]
+    │       │   │           ASCII: 'GC'
+    │       │   │       ├(109 bits) [Depth: 6]
+    │       │   │       │       ASCII: 'GCAAAAATTACTTGAA'
+    │       │   │       └(133 bits) [Depth: 6]
+    │       │   │               ASCII: 'GCTTCAATCAGGCCGTCAC'
+    │       │   └(139 bits) [Depth: 4]
+    │       │           ASCII: 'GGCCTCACGAAAAATTAGT'
+    │       └(8 bits) [Depth: 3]
+    │               ASCII: 'GT'
+    │           ├(117 bits) [Depth: 4]
+    │           │       ASCII: 'GTCCCAGAGGCTCATAT'
+    │           └(109 bits) [Depth: 4]
+    │                   ASCII: 'GTTGCAGTTGGCTTTT'
+    └(8 bits) [Depth: 1]
+            ASCII: 'T'
+        ├(2 bits) [Depth: 2]
+        │       ASCII: 'T'
+        │   ├(1 bits) [Depth: 3]
+        │   │       ASCII: 'T'
+        │   │   ├(39 bits) [Depth: 4]
+        │   │   │       ASCII: 'TAATGA'
+        │   │   │   ├(99 bits) [Depth: 5]
+        │   │   │   │       ASCII: 'TAATGACTTTTGGAGTTAC'
+        │   │   │   └(107 bits) [Depth: 5]
+        │   │   │           ASCII: 'TAATGAGAAAAAACGATCCT'
+        │   │   └(5 bits) [Depth: 4]
+        │   │           ASCII: 'TC'
+        │   │       ├(3 bits) [Depth: 5]
+        │   │       │       ASCII: 'TC'
+        │   │       │   ├(58 bits) [Depth: 6]
+        │   │       │   │       ASCII: 'TCAGGGGTGG'
+        │   │       │   └(138 bits) [Depth: 6]
+        │   │       │           ASCII: 'TCCGGAGGCGGATATTGCGA'
+        │   │       └(69 bits) [Depth: 5]
+        │   │               ASCII: 'TCTATGAATTA'
+        │   └(16 bits) [Depth: 3]
+        │           ASCII: 'TGA'
+        │       ├(91 bits) [Depth: 4]
+        │       │       ASCII: 'TGACAGGAAGGAAAA'
+        │       └(131 bits) [Depth: 4]
+        │               ASCII: 'TGAGTCACGAGGGCGCATTC'
+        └(8 bits) [Depth: 2]
+                ASCII: 'TT'
+            ├(3 bits) [Depth: 3]
+            │       ASCII: 'TT'
+            │   ├(5 bits) [Depth: 4]
+            │   │       ASCII: 'TTA'
+            │   │   ├(2 bits) [Depth: 5]
+            │   │   │       ASCII: 'TTA'
+            │   │   │   ├(59 bits) [Depth: 6]
+            │   │   │   │       ASCII: 'TTACCCGATAA'
+            │   │   │   └(91 bits) [Depth: 6]
+            │   │   │           ASCII: 'TTAGTCCCTGTTGAT'
+            │   │   └(77 bits) [Depth: 5]
+            │   │           ASCII: 'TTATACCTTGGAA'
+            │   └(7 bits) [Depth: 4]
+            │           ASCII: 'TTC'
+            │       ├(99 bits) [Depth: 5]
+            │       │       ASCII: 'TTCCCCCAAGCTATCG'
+            │       └(75 bits) [Depth: 5]
+            │               ASCII: 'TTCGTGGAAGGAC'
+            └(133 bits) [Depth: 3]
+                    ASCII: 'TTTTTCTCTAGCATGTTTT'
+```
+
+`dataset_100.csv`
+```python
+Patricia Tree:
+└(3 bits) [Depth: 0]
+        ASCII: ''
+    ├(1 bits) [Depth: 1]
+    │       ASCII: ''
+    │   ├(1 bits) [Depth: 2]
+    │   │       ASCII: ''
+    │   │   ├(1 bits) [Depth: 3]
+    │   │   │       ASCII: ''
+    │   │   │   ├(34 bits) [Depth: 4]
+    │   │   │   │       ASCII: 'Ascot'
+    │   │   │   │   └(13 bits) [Depth: 5]
+    │   │   │   │           ASCII: 'Ascot '
+    │   │   │   │       ├(27 bits) [Depth: 6]
+    │   │   │   │       │       ASCII: 'Ascot Park'
+    │   │   │   │       └(27 bits) [Depth: 6]
+    │   │   │   │               ASCII: 'Ascot Vale'
+    │   │   │   └(1 bits) [Depth: 4]
+    │   │   │           ASCII: ''
+    │   │   │       ├(4 bits) [Depth: 5]
+    │   │   │       │       ASCII: 'B'
+    │   │   │       │   ├(69 bits) [Depth: 6]
+    │   │   │       │   │       ASCII: 'Back Creek'
+    │   │   │       │   └(69 bits) [Depth: 6]
+    │   │   │       │           ASCII: 'Buckingham'
+    │   │   │       └(6 bits) [Depth: 5]
+    │   │   │               ASCII: 'C'
+    │   │   │           ├(43 bits) [Depth: 6]
+    │   │   │           │       ASCII: 'Carlton'
+    │   │   │           │   └(11 bits) [Depth: 7]
+    │   │   │           │           ASCII: 'Carlton '
+    │   │   │           │       ├(37 bits) [Depth: 8]
+    │   │   │           │       │       ASCII: 'Carlton North'
+    │   │   │           │       └(37 bits) [Depth: 8]
+    │   │   │           │               ASCII: 'Carlton River'
+    │   │   │           └(75 bits) [Depth: 6]
+    │   │   │                   ASCII: 'Cedar Creek'
+    │   │   └(1 bits) [Depth: 3]
+    │   │           ASCII: ''
+    │   │       ├(1 bits) [Depth: 4]
+    │   │       │       ASCII: ''
+    │   │       │   ├(65 bits) [Depth: 5]
+    │   │       │   │       ASCII: 'Docklands'
+    │   │       │   └(105 bits) [Depth: 5]
+    │   │       │           ASCII: 'East Melbourne'
+    │   │       └(5 bits) [Depth: 4]
+    │   │               ASCII: 'G'
+    │   │           ├(45 bits) [Depth: 5]
+    │   │           │       ASCII: 'Glenroy'
+    │   │           └(69 bits) [Depth: 5]
+    │   │                   ASCII: 'Greenlands'
+    │   └(1 bits) [Depth: 2]
+    │           ASCII: ''
+    │       ├(7 bits) [Depth: 3]
+    │       │       ASCII: 'K'
+    │       │   ├(68 bits) [Depth: 4]
+    │       │   │       ASCII: 'Kensington'
+    │       │   │   └(11 bits) [Depth: 5]
+    │       │   │           ASCII: 'Kensington '
+    │       │   │       ├(8 bits) [Depth: 6]
+    │       │   │       │       ASCII: 'Kensington G'
+    │       │   │       │   ├(45 bits) [Depth: 7]
+    │       │   │       │   │       ASCII: 'Kensington Gardens'
+    │       │   │       │   └(29 bits) [Depth: 7]
+    │       │   │       │           ASCII: 'Kensington Grove'
+    │       │   │       └(29 bits) [Depth: 6]
+    │       │   │               ASCII: 'Kensington Park'
+    │       │   └(60 bits) [Depth: 4]
+    │       │           ASCII: 'Kingswood'
+    │       └(1 bits) [Depth: 3]
+    │               ASCII: ''
+    │           ├(1 bits) [Depth: 4]
+    │           │       ASCII: ''
+    │           │   ├(129 bits) [Depth: 5]
+    │           │   │       ASCII: 'Little Back Creek'
+    │           │   └(5 bits) [Depth: 5]
+    │           │           ASCII: 'M'
+    │           │       ├(60 bits) [Depth: 6]
+    │           │       │       ASCII: 'Melbourne'
+    │           │       │   └(64 bits) [Depth: 7]
+    │           │       │           ASCII: 'Melbourne Airport'
+    │           │       └(100 bits) [Depth: 6]
+    │           │               ASCII: 'Mount Richmond'
+    │           └(45 bits) [Depth: 4]
+    │                   ASCII: 'North '
+    │               ├(69 bits) [Depth: 5]
+    │               │       ASCII: 'North Melbourne'
+    │               └(61 bits) [Depth: 5]
+    │                       ASCII: 'North Richmond'
+    └(1 bits) [Depth: 1]
+            ASCII: ''
+        ├(1 bits) [Depth: 2]
+        │       ASCII: ''
+        │   ├(1 bits) [Depth: 3]
+        │   │       ASCII: ''
+        │   │   ├(6 bits) [Depth: 4]
+        │   │   │       ASCII: 'P'
+        │   │   │   ├(60 bits) [Depth: 5]
+        │   │   │   │       ASCII: 'Parkville'
+        │   │   │   └(100 bits) [Depth: 5]
+        │   │   │           ASCII: 'Port Melbourne'
+        │   │   └(1 bits) [Depth: 4]
+        │   │           ASCII: ''
+        │   │       ├(5 bits) [Depth: 5]
+        │   │       │       ASCII: 'R'
+        │   │       │   ├(52 bits) [Depth: 6]
+        │   │       │   │       ASCII: 'Red Hill'
+        │   │       │   │   └(1 bits) [Depth: 7]
+        │   │       │   │           ASCII: 'Red Hill'
+        │   │       │   │       ├(47 bits) [Depth: 8]
+        │   │       │   │       │       ASCII: 'Red Hill South'
+        │   │       │   │       └(7 bits) [Depth: 8]
+        │   │       │   │               ASCII: 'Red Hills'
+        │   │       │   └(52 bits) [Depth: 6]
+        │   │       │           ASCII: 'Richmond'
+        │   │       │       └(11 bits) [Depth: 7]
+        │   │       │               ASCII: 'Richmond '
+        │   │       │           ├(2 bits) [Depth: 8]
+        │   │       │           │       ASCII: 'Richmond '
+        │   │       │           │   ├(27 bits) [Depth: 9]
+        │   │       │           │   │       ASCII: 'Richmond Hill'
+        │   │       │           │   └(59 bits) [Depth: 9]
+        │   │       │           │           ASCII: 'Richmond Lowlands'
+        │   │       │           └(2 bits) [Depth: 8]
+        │   │       │                   ASCII: 'Richmond '
+        │   │       │               ├(43 bits) [Depth: 9]
+        │   │       │               │       ASCII: 'Richmond Plains'
+        │   │       │               └(27 bits) [Depth: 9]
+        │   │       │                       ASCII: 'Richmond Vale'
+        │   │       └(4 bits) [Depth: 5]
+        │   │               ASCII: 'S'
+        │   │           ├(1 bits) [Depth: 6]
+        │   │           │       ASCII: 'S'
+        │   │           │   ├(36 bits) [Depth: 7]
+        │   │           │   │       ASCII: 'Seddon'
+        │   │           │   └(39 bits) [Depth: 7]
+        │   │           │           ASCII: 'South '
+        │   │           │       ├(69 bits) [Depth: 8]
+        │   │           │       │       ASCII: 'South Melbourne'
+        │   │           │       └(53 bits) [Depth: 8]
+        │   │           │               ASCII: 'South Windsor'
+        │   │           └(8 bits) [Depth: 6]
+        │   │                   ASCII: 'Sp'
+        │   │               ├(53 bits) [Depth: 7]
+        │   │               │       ASCII: 'Spotswood'
+        │   │               └(69 bits) [Depth: 7]
+        │   │                       ASCII: 'Springfield'
+        │   │                   └(12 bits) [Depth: 8]
+        │   │                           ASCII: 'Springfield '
+        │   │                       ├(52 bits) [Depth: 9]
+        │   │                       │       ASCII: 'Springfield Central'
+        │   │                       └(36 bits) [Depth: 9]
+        │   │                               ASCII: 'Springfield Lakes'
+        │   └(7 bits) [Depth: 3]
+        │           ASCII: 'W'
+        │       ├(31 bits) [Depth: 4]
+        │       │       ASCII: 'West '
+        │       │   ├(69 bits) [Depth: 5]
+        │       │   │       ASCII: 'West Melbourne'
+        │       │   └(61 bits) [Depth: 5]
+        │       │           ASCII: 'West Richmond'
+        │       └(10 bits) [Depth: 4]
+        │               ASCII: 'Wi'
+        │           ├(74 bits) [Depth: 5]
+        │           │       ASCII: 'Williamstown'
+        │           │   └(48 bits) [Depth: 6]
+        │           │           ASCII: 'Williamstown North'
+        │           └(34 bits) [Depth: 5]
+        │                   ASCII: 'Windsor'
+        │               └(14 bits) [Depth: 6]
+        │                       ASCII: 'Windsor '
+        │                   ├(34 bits) [Depth: 7]
+        │                   │       ASCII: 'Windsor Downs'
+        │                   └(50 bits) [Depth: 7]
+        │                           ASCII: 'Windsor Gardens'
+        └(76 bits) [Depth: 2]
+                ASCII: 'Yarraville'
+
+```

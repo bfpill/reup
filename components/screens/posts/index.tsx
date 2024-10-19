@@ -22,10 +22,10 @@ export const Layout = ({ post, route }: Props) => {
   };
 
   const PublishedTime = () => {
-    return <div>Published {formatter.date(new Date(post.time.created))}</div>;
+    return <div>Published {formatter.date(new Date(post?.time?.created))}</div>;
   };
   const UpdateTime = () => {
-    return <div>Updated {formatter.date(new Date(post.time.updated))}</div>;
+    return <div>Updated {formatter.date(new Date(post?.time?.updated))}</div>;
   };
 
   const ReadingTime = () => {
@@ -36,13 +36,17 @@ export const Layout = ({ post, route }: Props) => {
     <React.Fragment>
       <div className="flex flex-col">
         <div>
-          <h1>{post.title}</h1>
+        <h1 className="text-5xl font-lora">{post.title}</h1>
         </div>
         <div className="mt-1 flex gap-2 text-muted text-small">
           <PublishedTime />
           <Seperator />
-          <UpdateTime />
-          <Seperator />
+          {
+            post?.time?.updated !== post?.time?.created && <>
+              <UpdateTime />
+              <Seperator />
+            </>
+          }
           <ReadingTime />
         </div>
       </div>
