@@ -47,7 +47,7 @@ export default function Page({ params }: PageProps) {
 
   return (
     <div className="absolute top-0 left-0 flex w-screen items-center justify-center bg-[#EAF3FF]">
-      <div className="h-full w-3/5 min-w-[1300px] overflow-y-auto">
+      <div className="h-full w-3/5 min-w-[1000px] overflow-y-auto border ">
         <div className="absolute top-10 left-10">
           <Breadcrumb />
         </div>
