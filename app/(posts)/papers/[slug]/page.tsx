@@ -1,6 +1,7 @@
 import { Breadcrumb } from "@/components/breadcrumb";
 import { getPosts } from "@/lib/mdx";
 import { OpenGraph } from "@/lib/og";
+import { Post } from "@/types";
 import { notFound } from "next/navigation";
 import React from "react";
 
