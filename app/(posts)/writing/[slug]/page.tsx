@@ -1,3 +1,5 @@
+import type { Post } from "@/types";
+
 import { Layout } from "@/components/screens/posts";
 import { getPosts } from "@/lib/mdx";
 import { OpenGraph } from "@/lib/og";

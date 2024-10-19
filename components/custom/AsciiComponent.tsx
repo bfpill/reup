@@ -63,9 +63,9 @@ const AsciiComponent = () => {
   const height = 75;
 
   const [fps, setFps] = useState(0);
-  const lastFrameTimeRef = useRef(null);
-  const [boardState, setBoardState] = useState([]);
-  const animationFrameIdRef = useRef();
+  const lastFrameTimeRef = useRef<number | null>(null);
+  const [boardState, setBoardState] = useState<number[][]>([]);
+  const animationFrameIdRef = useRef<number | undefined>(undefined);
 
   // Fixed bounds based on known Lorenz attractor ranges
   const bounds = {
@@ -85,7 +85,7 @@ const AsciiComponent = () => {
       }
       lastFrameTimeRef.current = currentTime;
 
-      const updatedBoardState = renderLorenzAttractor(sigma, rho, beta, x0, y0, z0, timeStepRef.current, width, height, bounds);
+      const updatedBoardState = renderLorenzAttractor(sigma, rho, beta, x0, y0, z0, timeStepRef.current, width, height, bounds) as number[][];
       setBoardState(updatedBoardState);
 
       const timeStepDiff = 1;

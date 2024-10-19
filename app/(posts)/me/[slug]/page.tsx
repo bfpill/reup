@@ -1,9 +1,10 @@
+import type { Post } from "@/types";
+
 import { PostNavigation } from "@/components/post-navigation";
 import { formatter } from "@/lib/formatter";
 import { getPosts } from "@/lib/mdx";
 import { OpenGraph } from "@/lib/og";
 import { MDX } from "@/mdx-components";
-import type { Post } from "@/types";
 
 import { notFound } from "next/navigation";
 import React from "react";
