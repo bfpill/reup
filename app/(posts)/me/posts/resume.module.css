@@ -1,0 +1,25 @@
+.profile-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.profile-image {
+  width: 150px;
+  height: auto;
+  border: 5px solid #fff;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  transform: rotate(-5deg);
+  margin-left: 20px;
+}
+
+.profile-image::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 20px;
+  height: 20px;
+  background: url('path/to/pin-image.png') no-repeat center center;
+  background-size: contain;
+}
