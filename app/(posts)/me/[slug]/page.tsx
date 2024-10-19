@@ -62,7 +62,7 @@ const Layout = ({ post, route }: Props) => {
   };
 
   const ReadingTime = () => {
-    return <div>{readingTime(post.content).minutes} minutes read</div>;
+    return <div>{readingTime(post.content).minutes} minute read</div>;
   };
 
   return (
