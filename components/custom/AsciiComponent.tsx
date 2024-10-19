@@ -116,8 +116,8 @@ const AsciiComponent = () => {
           </div>
         ))}
       </div>
-      <div className="absolute right-10 bottom-10 mr-20 text-stone-500 text-xs">fps = {fps}</div>
-      <div className="absolute right-10 bottom-10 text-stone-500 text-xs">t = {timeStepRef.current}</div>
+      <div className="absolute right-0 bottom-0 mr-20 text-stone-500 text-xs">fps = {fps}</div>
+      <div className="absolute right-0 bottom-0 text-stone-500 text-xs">t = {timeStepRef.current}</div>
     </div>
   );
 };

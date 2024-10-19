@@ -9,7 +9,7 @@ const Spacer = () => <div style={{ marginTop: "24px" }} />;
 
 export default function Home() {
   return (
-    <div>
+    <div className="relative">
       <FadeIn.Container>
         <FadeIn.Item>
           <div className="flex justify-between">
@@ -18,10 +18,11 @@ export default function Home() {
             </div>
           </div>
         </FadeIn.Item>
-        <Spacer />
-        <div className="z-99 w-full pr-20">
-          <AsciiComponent />
-        </div>
+        <FadeIn.Item>
+          <div className="z-99 w-full pr-20 -mt-20">
+            <AsciiComponent />
+          </div>
+        </FadeIn.Item>
         <FadeIn.Item>
           <Posts category="me" />
         </FadeIn.Item>
