@@ -104,8 +104,8 @@ const AsciiComponent = () => {
   }, []);
 
   return (
-    <div className="flex min-h-[700px] w-full items-center justify-center text-black">
-      <div className="">
+    <div className="flex min-h-[300px] md:min-h-[700px] w-full items-center justify-center text-black">
+      <div className="relative scale-[0.5] md:scale-[1]">
         {boardState.map((row, i) => (
           <div className="inline-block flex select-none font-mono leading-none" style={{ fontSize: 8 }} key={JSON.stringify(i)}>
             {row.map((tile, j) => (

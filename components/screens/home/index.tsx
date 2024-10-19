@@ -19,7 +19,7 @@ export default function Home() {
           </div>
         </FadeIn.Item>
         <Spacer />
-        <div className="z-99 w-md pr-20">
+        <div className="z-99 w-full pr-20">
           <AsciiComponent />
         </div>
         <FadeIn.Item>
