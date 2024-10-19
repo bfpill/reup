@@ -54,7 +54,7 @@ export default function Page({ params }: PageProps) {
         <div className="h-full w-full">
           <div className="flex h-screen flex-col">
             <iframe
-              src="https://max.v3rv.com/writing/papers/A%20Contrastive%20Analysis%20of%20Features%20in%20Twin%20Toy%20Transformers%20that%20(play)%20Chess"
+              src="https://bfpill.vercel.app/writing/papers/A%20Contrastive%20Analysis%20of%20Features%20in%20Twin%20Toy%20Transformers%20that%20(play)%20Chess"
               style={{
                 width: "100%",
                 height: "100%",
