@@ -10,6 +10,7 @@ import Preview from "@/components/preview";
 import { cn } from "@/lib/cn";
 
 import { MDXRemote } from "next-mdx-remote/rsc";
+import { Lora } from "next/font/google";
 import React from "react";
 import rehypePrettyCode from "rehype-pretty-code";
 import rehypeSlug from "rehype-slug";
@@ -19,9 +20,6 @@ const lora = Lora({
   subsets: ["latin"],
   display: "swap",
 });
-
-import { Lora } from "next/font/google";
-
 
 const components: MDXComponents = {
   PreviewExample: () => {
@@ -43,32 +41,44 @@ const components: MDXComponents = {
     if (id?.includes("footnote-label")) {
       return null;
     }
-    return <h1 className="text-3xl font-lora" id={id}>{children}</h1>;
+    return (
+      <h1 className="font-lora text-3xl" id={id}>
+        {children}
+      </h1>
+    );
   },
   h2: ({ children, id }: React.HTMLAttributes<HTMLHeadingElement>) => {
     if (id?.includes("footnote-label")) {
       return null;
     }
-    return <h2 className="text-gray-200" id={id}>{children}</h2>;
+    return (
+      <h2 className="text-gray-200" id={id}>
+        {children}
+      </h2>
+    );
   },
   h3: ({ children, id }: React.HTMLAttributes<HTMLHeadingElement>) => {
     if (id?.includes("footnote-label")) {
       return null;
     }
-    return <h3 className="text-gray-300 italic" id={id}>{children}</h3>;
+    return (
+      <h3 className="text-gray-300 italic" id={id}>
+        {children}
+      </h3>
+    );
   },
   a: ({ children, href }) => {
     if (href?.startsWith("#user-content-fn-")) {
       return <FootnoteForwardReference href={href}>{children}</FootnoteForwardReference>;
     }
     return (
-      <Link href={href} className="inline-flex items-center gap-1 text-muted text-blue-400" underline>
+      <Link href={href} className="inline-flex items-center gap-1 text-blue-400 text-muted" underline>
         {children}
       </Link>
     );
   },
   em: ({ children, className, ...props }: React.HTMLAttributes<HTMLElement>) => {
-    return <span className="italic text-gray-400">{children}</span>;
+    return <span className="text-gray-400 italic">{children}</span>;
   },
   blockquote: ({ className, ...props }: React.HTMLAttributes<HTMLElement>) => (
     <blockquote className={cn("mt-6 border-gray-4 border-l-2 pl-6 text-muted", className)} {...props} />

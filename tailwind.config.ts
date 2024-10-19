@@ -146,7 +146,7 @@ const config: Config = {
       fontFamily: {
         inter: ["var(--font-inter)"],
         apple: ["var(--font-apple)"],
-        lora: ['Lora'],
+        lora: ["Lora"],
       },
       borderRadius: {
         small: "var(--radius-small)",

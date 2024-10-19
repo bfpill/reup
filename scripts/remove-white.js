@@ -1,6 +1,6 @@
-const sharp = require('sharp');
-const fs = require('fs-extra');
-const path = require('path');
+const sharp = require("sharp");
+const fs = require("fs-extra");
+const path = require("path");
 
 async function removeWhiteBackgroundAndInvertColors(inputPath, outputPath) {
   const image = sharp(inputPath);
@@ -17,16 +17,16 @@ async function removeWhiteBackgroundAndInvertColors(inputPath, outputPath) {
     const alpha = data[i + 3];
 
     // Use a more sophisticated check for white pixels
-    const isWhite = (red > 240 && green > 240 && blue > 240);
+    const isWhite = red > 240 && green > 240 && blue > 240;
 
     if (isWhite) {
       processedData[i + 3] = 0; // Set alpha to 0 (transparent)
     } else {
       // Invert colors only if the pixel is not fully transparent
       if (alpha > 0) {
-        processedData[i] = 255 - red;     // Invert red
+        processedData[i] = 255 - red; // Invert red
         processedData[i + 1] = 255 - green; // Invert green
-        processedData[i + 2] = 255 - blue;  // Invert blue
+        processedData[i + 2] = 255 - blue; // Invert blue
       }
     }
   }
@@ -50,7 +50,7 @@ async function processFolder(inputDir, outputDir) {
 
     for (const file of files) {
       const inputFilePath = path.join(inputDir, file);
-      const outputFilePath = path.join(outputDir, path.parse(file).name + '.png');
+      const outputFilePath = path.join(outputDir, `${path.parse(file).name}.png`);
 
       const stats = await fs.stat(inputFilePath);
 
@@ -61,13 +61,12 @@ async function processFolder(inputDir, outputDir) {
       }
     }
   } catch (err) {
-    console.error('Error processing folder:', err);
+    console.error("Error processing folder:", err);
   }
 }
 
-
 // Example usage
-const inputDirectory = './public/images/dsa_a2/reg';
-const outputDirectory = './public/images/dsa_a2/processed';
+const inputDirectory = "./public/images/dsa_a2/reg";
+const outputDirectory = "./public/images/dsa_a2/processed";
 
 processFolder(inputDirectory, outputDirectory);

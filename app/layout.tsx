@@ -1,6 +1,9 @@
-'use client'
+"use client";
+
 import "@/styles/main.css";
+
 import { Providers } from "@/components/providers";
+
 import clsx from "clsx";
 import { Inter } from "next/font/google";
 import { usePathname } from "next/navigation"; // Import usePathname
@@ -28,9 +31,7 @@ export default function RootLayout({
       <body>
         <Providers>
           <main className="mx-auto max-w-screen-sm overflow-x-hidden px-6 py-24 md:overflow-x-visible ">
-            <article className="article">
-              {children}
-            </article>
+            <article className="article">{children}</article>
           </main>
         </Providers>
       </body>

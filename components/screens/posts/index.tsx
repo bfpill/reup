@@ -36,17 +36,17 @@ export const Layout = ({ post, route }: Props) => {
     <React.Fragment>
       <div className="flex flex-col">
         <div>
-        <h1 className="text-5xl font-lora">{post.title}</h1>
+          <h1 className="font-lora text-5xl">{post.title}</h1>
         </div>
         <div className="mt-1 flex gap-2 text-muted text-small">
           <PublishedTime />
           <Seperator />
-          {
-            post?.time?.updated !== post?.time?.created && <>
+          {post?.time?.updated !== post?.time?.created && (
+            <>
               <UpdateTime />
               <Seperator />
             </>
-          }
+          )}
           <ReadingTime />
         </div>
       </div>

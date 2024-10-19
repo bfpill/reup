@@ -36,8 +36,6 @@ export default function Home() {
           <Footer />
         </FadeIn.Item>
       </FadeIn.Container>
-
     </div>
-
   );
 }

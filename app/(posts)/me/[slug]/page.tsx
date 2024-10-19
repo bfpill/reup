@@ -1,15 +1,13 @@
-import type { Post } from "@/types";
-
-import { getPosts } from "@/lib/mdx";
-import { OpenGraph } from "@/lib/og";
-
-import { notFound } from "next/navigation";
-
-import { TableOfContents } from "@/components/on-this-page";
 import { PostNavigation } from "@/components/post-navigation";
 import { formatter } from "@/lib/formatter";
+import { getPosts } from "@/lib/mdx";
+import { OpenGraph } from "@/lib/og";
 import { MDX } from "@/mdx-components";
+import type { Post } from "@/types";
 
+import { notFound } from "next/navigation";
+import React from "react";
+import { readingTime } from "reading-time-estimator";
 
 const route = "me";
 
@@ -42,8 +40,6 @@ export function generateMetadata({ params }: PageProps) {
     },
   };
 }
-import { readingTime } from "reading-time-estimator";
-import React from "react";
 
 interface Props {
   post: Post;
@@ -75,8 +71,6 @@ const Layout = ({ post, route }: Props) => {
     </React.Fragment>
   );
 };
-
-
 
 export default function Page({ params }: PageProps) {
   const post = Posts.find((post: { slug: string }) => post.slug === params.slug);

@@ -1,7 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from 'react';
-import * as THREE from 'three';
+import { useEffect, useRef, useState } from "react";
 
 const lorenz = (x, y, z, sigma, rho, beta) => {
   const dx = sigma * (y - x);
@@ -10,18 +9,7 @@ const lorenz = (x, y, z, sigma, rho, beta) => {
   return [dx, dy, dz];
 };
 
-const renderLorenzAttractor = (
-  sigma,
-  rho,
-  beta,
-  x0,
-  y0,
-  z0,
-  numSteps,
-  width,
-  height,
-  bounds
-) => {
+const renderLorenzAttractor = (sigma, rho, beta, x0, y0, z0, numSteps, width, height, bounds) => {
   const positions = new Float32Array(numSteps * 3);
 
   let x = x0;
@@ -42,20 +30,13 @@ const renderLorenzAttractor = (
   // Use fixed bounds
   const { minX, maxX, minY, maxY } = bounds;
 
-  const canvas = Array.from({ length: height }, () =>
-    Array.from({ length: width }, () => 0)
-  );
+  const canvas = Array.from({ length: height }, () => Array.from({ length: width }, () => 0));
 
   for (let i = 0; i < positions.length; i += 3) {
     const x = positions[i];
     const y = positions[i + 1];
 
-    if (
-      isFinite(minX) &&
-      isFinite(maxX) &&
-      isFinite(minY) &&
-      isFinite(maxY)
-    ) {
+    if (Number.isFinite(minX) && Number.isFinite(maxX) && Number.isFinite(minY) && Number.isFinite(maxY)) {
       const xd = maxX - minX;
       const yd = maxY - minY;
       const col = Math.floor(((x - minX) / xd) * (width - 1));
@@ -104,18 +85,7 @@ const AsciiComponent = () => {
       }
       lastFrameTimeRef.current = currentTime;
 
-      const updatedBoardState = renderLorenzAttractor(
-        sigma,
-        rho,
-        beta,
-        x0,
-        y0,
-        z0,
-        timeStepRef.current,
-        width,
-        height,
-        bounds
-      );
+      const updatedBoardState = renderLorenzAttractor(sigma, rho, beta, x0, y0, z0, timeStepRef.current, width, height, bounds);
       setBoardState(updatedBoardState);
 
       const timeStepDiff = 1;
@@ -134,28 +104,20 @@ const AsciiComponent = () => {
   }, []);
 
   return (
-    <div className="text-black min-h-[700px] w-full flex items-center justify-center">
+    <div className="flex min-h-[700px] w-full items-center justify-center text-black">
       <div className="">
         {boardState.map((row, i) => (
-          <div
-            className="flex font-mono leading-none inline-block select-none"
-            style={{ fontSize: 8 }}
-            key={JSON.stringify(i)}
-          >
+          <div className="inline-block flex select-none font-mono leading-none" style={{ fontSize: 8 }} key={JSON.stringify(i)}>
             {row.map((tile, j) => (
               <div className="min-w-[7px]" key={JSON.stringify(j)}>
-                {tile === 0 ? '\0' : '1'}
+                {tile === 0 ? "\0" : "1"}
               </div>
             ))}
           </div>
         ))}
       </div>
-      <div className="text-xs text-stone-500 absolute bottom-10 right-10 mr-20">
-        fps = {fps}
-      </div>
-      <div className="text-xs text-stone-500 absolute bottom-10 right-10">
-        t = {timeStepRef.current}
-      </div>
+      <div className="absolute right-10 bottom-10 mr-20 text-stone-500 text-xs">fps = {fps}</div>
+      <div className="absolute right-10 bottom-10 text-stone-500 text-xs">t = {timeStepRef.current}</div>
     </div>
   );
 };

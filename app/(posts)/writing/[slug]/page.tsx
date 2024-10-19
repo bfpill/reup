@@ -1,6 +1,7 @@
 import { Layout } from "@/components/screens/posts";
 import { getPosts } from "@/lib/mdx";
 import { OpenGraph } from "@/lib/og";
+
 import { notFound } from "next/navigation";
 
 const route = "writing";
