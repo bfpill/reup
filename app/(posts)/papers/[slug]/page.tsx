@@ -1,5 +1,4 @@
 import { Breadcrumb } from "@/components/breadcrumb";
-import { Layout } from "@/components/screens/posts";
 import { getPosts } from "@/lib/mdx";
 import { OpenGraph } from "@/lib/og";
 import { notFound } from "next/navigation";

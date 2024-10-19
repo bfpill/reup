@@ -140,10 +140,10 @@ const AsciiComponent = () => {
           <div
             className="flex font-mono leading-none inline-block select-none"
             style={{ fontSize: 8 }}
-            key={i}
+            key={JSON.stringify(i)}
           >
             {row.map((tile, j) => (
-              <div className="min-w-[7px]" key={j}>
+              <div className="min-w-[7px]" key={JSON.stringify(j)}>
                 {tile === 0 ? '\0' : '1'}
               </div>
             ))}

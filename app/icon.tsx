@@ -12,7 +12,7 @@ export default function Icon() {
     (
       <div
         style={{
-          background: gray.gray8,
+          background: "blue",
           width: "100%",
           height: "100%",
           display: "flex",
@@ -22,17 +22,6 @@ export default function Icon() {
           padding: 4,
         }}
       >
-        <div
-          style={{
-            background: gray.gray12,
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            borderRadius: 100,
-          }}
-        />
       </div>
     ),
     {
