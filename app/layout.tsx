@@ -8,6 +8,7 @@ import clsx from "clsx";
 import { Inter } from "next/font/google";
 import { usePathname } from "next/navigation"; // Import usePathname
 import { Analytics } from "@vercel/analytics/react"
+import { useEffect } from "react";
 // export const metadata: Metadata = {
 //   ...OpenGraph,
 // };
@@ -25,7 +26,14 @@ export default function RootLayout({
 }>) {
   const pathname = usePathname();
 
-  const specificRoute = "/papers/chess";
+  const specificRoute = "/writing/papers/A%20Contrastive%20Analysis%20of%20Feature";
+
+  useEffect(() => {
+    if (pathname === specificRoute) {
+      window.location.href = "/papers/chess";
+    }
+  }, [pathname]);
+
 
   return (
     <html lang="en" className={clsx(inter.className)} suppressHydrationWarning>
