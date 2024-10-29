@@ -27,9 +27,10 @@ export default function RootLayout({
   const pathname = usePathname();
 
   const specificRoute = "/writing/papers/A%20Contrastive%20Analysis%20of%20Feature";
+  const route2 = "writing/papers/A%20Contrastive%20Analysis%20of%20Features%20in%20Twin%20Toy%20Transformers%20that%20(play)%20Chess"
 
   useEffect(() => {
-    if (pathname === specificRoute) {
+    if (pathname === specificRoute || pathname === route2) {
       window.location.href = "/papers/chess";
     }
   }, [pathname]);
