@@ -22,7 +22,7 @@ export default function Home() {
           </div>
         </FadeIn.Item>
         <FadeIn.Item>
-          <div className="z-99 w-full pr-20 -mt-20">
+          <div className="z-99 w-full pr-20 -mt-20 mb-4">
             <AsciiComponent />
           </div>
         </FadeIn.Item>
