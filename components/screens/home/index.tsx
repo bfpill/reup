@@ -6,6 +6,7 @@ import * as FadeIn from "@/components/motion/staggers/fade";
 import { Posts } from "@/components/posts";
 
 import { Analytics } from "@vercel/analytics/react"
+import { DaysOfSummer } from "@/components/custom/DaysOfSummer";
 
 const Spacer = () => <div style={{ marginTop: "24px" }} />;
 
@@ -26,6 +27,9 @@ export default function Home() {
           </div>
         </FadeIn.Item>
         <FadeIn.Item>
+        <DaysOfSummer/>
+        </FadeIn.Item>
+        <FadeIn.Item>
           <Posts category="me" />
         </FadeIn.Item>
         <FadeIn.Item>
@@ -33,6 +37,9 @@ export default function Home() {
         </FadeIn.Item>
         <FadeIn.Item>
           <Posts category="writing" />
+        </FadeIn.Item>
+        <FadeIn.Item>
+          <Posts category="daily-notes" />
         </FadeIn.Item>
         <Spacer />
         <FadeIn.Item>

@@ -1,4 +1,5 @@
 import { Breadcrumb } from "@/components/breadcrumb";
+import { SummerDaysGraph } from "@/components/custom/DaysOfSummer";
 
 import React from "react";
 

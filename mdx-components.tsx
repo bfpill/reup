@@ -16,10 +16,14 @@ import rehypePrettyCode from "rehype-pretty-code";
 import rehypeSlug from "rehype-slug";
 import remarkGfm from "remark-gfm";
 
+import { SummerDaysGraph } from "@/components/custom/DaysOfSummer";
+
+
 const lora = Lora({
   subsets: ["latin"],
   display: "swap",
 });
+
 
 const components: MDXComponents = {
   PreviewExample: () => {
@@ -142,6 +146,7 @@ const components: MDXComponents = {
     }
     return <li className={cn("mt-2 ml-2 list-item", className)}>{children}</li>;
   },
+  SummerDaysGraph,
 };
 
 export function useMDXComponents(components: MDXComponents): MDXComponents {
