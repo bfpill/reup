@@ -26,3 +26,44 @@ as much of my research workflow as I can. Hopefully I can make some of this stuf
 * I'm going to be trying to be more purposeful with my note taking - right now this looks like throwing any terms / formulas / concepts I don't understand 
 into anki. I've used spaced repetition in the past (I decided it would be a good idea to take a biology class (it was not)). Hopefully this will make bringing ideas down into 
 working memory for triangulation and cross-pollination easier.
+
+I was busy until around 4pm today, but I managed to get through the transformer implementation section of the ARENA course
++ hack up this 'daily post' stuff. Never used einops before but I'm hoping it's going to solve the broadcasting hell that pytorch always seems to be for me. 
+
+Here's my implementation of attention with einops (problem from the ARENA course): 
+
+```python
+def forward(
+    self, normalized_resid_pre: Float[Tensor, "batch posn d_model"]
+) -> Float[Tensor, "batch posn d_model"]:
+
+    # leave b as is, leave q as is, mult and sum over d, leave h as is
+    keys = t.einsum('bkd,ndh->bknh', normalized_resid_pre, self.W_K)
+    queries = t.einsum('bqd,ndh->bqnh', normalized_resid_pre, self.W_Q)
+    values = t.einsum('bvd,ndh->bvnh', normalized_resid_pre, self.W_V)
+
+    keys, queries, values = keys+self.b_K, queries+self.b_Q, values+self.b_V
+
+    # move q and k to the end, and dot product over the h, which is d_head
+    # this gets the key x query matrix for each head
+    attn_scores = t.einsum('bqnh,bknh->bnqk', queries, keys)
+
+    # scale and apply mask
+    masked = self.apply_causal_mask(attn_scores/self.cfg.d_head ** 0.5)
+    attn_probs = t.softmax(masked, dim=-1)
+
+    # not completely sure why we put q after b here and not at the end
+    weighted_values = t.einsum('bnqk,bknh->bqnh', attn_probs, values)
+
+    # linear map to get query results into the RS
+    result = t.einsum('bqnh,nhe->bqne', weighted_values, self.W_O)
+
+    # sum over all heads by omitting n in the result
+    attn_output = t.einsum('bqne->bqe', result)
+
+    return attn_output + self.b_O
+```
+
+This one was less tricky than I thought but einsum is still not completely obvious to me. 
+I'm really looking forward to the rest of the course, so far everything has been super nicely structured, short 
+feedbadck loops are so tasty. 

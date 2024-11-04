@@ -1,0 +1,70 @@
+---
+title: "2024-11-04"
+time:
+  created: "2024-11-04T19:24:46.167Z"
+  updated: "2024-11-04T06:19:19.634Z"
+---
+
+# 2024-11-04
+
+<div className="mt-5 mb-5">
+  <SummerDaysGraph day={"2024-11-04"}/>
+</div>
+
+11:35 - finished chapter [1.1](https://arena3-chapter1-transformer-interp.streamlit.app/%5B1.1%5D_Transformer_from_Scratch) from ARENA. 
+
+12:30 - reading https://www.lesswrong.com/posts/vJFdjigzmcXMhNTsx/simulators#The_limit_of_sequence_modeling
+
+from the post: 
+> In fact, [GPT-N] is not specifically optimized to give true answers, which a classical oracle should strive for, but rather to minimize the divergence between predictions and training examples, independent of truth
+
+* I think the takeaway from this is that GPT-N would be _able_ to predict the truth because somewhere deep down it's learned everything there is to know about the core
+generator function that is our universe; All the sentence continuations GPT is trained on are artifacts of our 'reality', no matter how fantastical and out of world any data may be. 
+Even knowing the true distribution lies somewhere in the model, you'd have to actualy get the model to a place where you can sample the just the 'important truths' out of the world model, 
+ignoring the 'unimportant truths' that are reflections of the input prompt. 
+* Janus put this much better than I could later in the post: 
+> the upper bound of what can be learned from a dataset is not the most capable trajectory, but the conditional structure of the universe implicated by their sum (though it may not be trivial to extract that knowledge)
+
+
+* Amazing foreshadowing of o1 here: 
+
+> Or, in other words, the more general problem we have to solve is not asking GPT the question[20] that makes it output the right answer, but asking GPT the question that makes it output the right question (…) that makes it output the right answer.[21]
+
+
+The post got me thinking about models that do cellular automata again. Ages ago I tried doing gradient ascent on GOL kernels so that they would lead to a desired board
+state after some num of timesteps but it didn't work very well as the gradients (with a differentiable update rule) from repeatedly updating the 
+board state were super messy. I think I could try this again, I didn't really know what I was doing last time. I might try training a model to 
+predict the *start board state* given a *final board state* as input, which I could do by either creating a dataset or trying to figure out an RL method. 
+It would be sick to learn a general computation function (maybe from a dataset) and then see how 'weird' (OOD) you could make the target boards / how it scales, etc.
+The fun part would be having it learn the starting board for an arbitrary image and having the image 'assemble' + have it try fractals and space filling curves etc. 
+
+<div className="flex flex-row w-full h-40 gap-5 mb-64 mt-10">
+  <div className="flex flex-row w-full h-40">
+    ![CA](/images/daily-notes/CA.gif)
+  </div>
+  <div className="flex flex-row w-full h-40">
+    ![CA](/images/daily-notes/CA_a.png)
+  </div>
+  <div className="flex flex-row w-full h-40">
+    ![CA](/images/daily-notes/faces.gif)
+  </div>
+</div>
+
+2:00 - started messing around with training a model to predict starting boards given an output board. 
+
+5:00 - simple 2 layer transformer seems to be training, for right now it's on a super simple dataset where it just has to predict the board one step _back_. I'm going to leave this training for a bit
+and try and keep going through ARENA on the colab. The data is basically given 3 as input predict 2 (or any other state which leads to 3 after a step):
+
+<div className="flex flex-row w-full h-40 mb-64 mt-10">
+  ![CA](/images/daily-notes/glider.jpg)
+</div>
+
+5:24 - Paused training because I realized that because there are multiple boards at step i-1 that lead to the same board at step i, the model could be correctly generating start boards but because we're training on input output pairs the model will get penalized even if it was right. 
+duh. 
+
+5:50 - Modified the training loop to mask out all boards that correctly reproduce the start board when played for n steps, regardless of similarity to the target start board.
+So we're still using the target start board to update grad when incorrect. Not sure how this will affect learning, because a model being 'almost' correct will be penalized on a correct
+board that may be very different from it's prediction. 
+
+
+
