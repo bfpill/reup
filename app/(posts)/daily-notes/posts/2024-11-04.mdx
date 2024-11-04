@@ -66,5 +66,19 @@ duh.
 So we're still using the target start board to update grad when incorrect. Not sure how this will affect learning, because a model being 'almost' correct will be penalized on a correct
 board that may be very different from it's prediction. 
 
+8:20 - Back from gym and dinner. Model still puffing along but I think I'm going to change up the loss function / increase learning rate here. 
+
+<div className="flex flex-row w-full h-40 mb-64 mt-10">
+  ![CA](/images/daily-notes/w&bCAtransformer2024-11-04.png)
+</div>
+
+8:40 - Turns out the little tiny model (2 layer transformer, 256 d_model) was doing gods work on these outputs and definitely manages to lock down a vibe. 
+*Plot (at above loss) comparing result of running GOL update on models predicted previous state vs the input state*: 
+
+<div className="flex flex-row w-full h-40 mb-64 mt-10">
+  ![CA](/images/daily-notes/256_embed_2l_input_vs_prediction_pairs.png)
+</div>
+
+Going to leave a 3 layer 512-d johnny training while I do some more arena course.
 
 
