@@ -161,7 +161,7 @@ const AsciiComponent = () => {
           </div>
         </div>
       </div>
-      <div className="w-full flex flex-row items-center justify-between mt-[24vh] xl:mt-[25vh] md:mt-[32vh] space-y-4">
+      <div className="w-full flex flex-row items-center justify-between mt-[10vh] xl:mt-[34vh] md:mt-[26vh] space-y-4 z-100">
         <div className="flex items-center space-x-2 mt-4">
           <label htmlFor="width" className="text-stone-500 text-xs">
             res
