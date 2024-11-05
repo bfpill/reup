@@ -142,7 +142,7 @@ const AsciiComponent = () => {
 
   return (
     <div className="relative w-full flex flex-col items-center justify-center">
-      <div className="flex flex-col items-center justify-center text-black h-[30vh] xl:w-[50vw] w-[80vw] relative">
+      <div className="flex flex-col items-center justify-center text-black h-[30vh] xl:w-[60vw] w-[80vw] relative">
         <div className="mt-5 scale-[0.3] md:scale-[0.4] xl:scale-[0.6]">
           <div className="relative" style={{ transform: `scale(${scale})` }}>
             {boardState.map((row, i) => (
@@ -172,7 +172,7 @@ const AsciiComponent = () => {
             min="50"
             max="300"
             value={width}
-            onChange={(e) => { setWidth(Number(e.target.value)); setHeight(Number(e.target.value)*(2/3)) }}
+            onChange={(e) => { setWidth(Number(e.target.value)); setHeight(Number(e.target.value)/2) }}
             className="w-32 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
             style={{
               accentColor: '#4A90E2', // Optional: Customize the slider color
