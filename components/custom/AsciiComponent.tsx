@@ -33,9 +33,9 @@ const renderLorenzAttractor = (sigma, rho, beta, x0, y0, z0, numSteps, width, he
   const canvas = Array.from({ length: height }, () => Array.from({ length: width }, () => 0));
 
   for (let i = 0; i < positions.length; i += 3) {
-    let x = positions[i];
-    let y = positions[i + 1];
-    let z = positions[i + 2];
+    const x = positions[i];
+    const y = positions[i + 1];
+    const z = positions[i + 2];
 
     // Apply 3D rotation around the z-axis
     const cosAngle = Math.cos(angle);
@@ -75,8 +75,8 @@ const AsciiComponent = () => {
   const y0 = 0.0;
   const z0 = 0.0;
   const timeStepRef = useRef(1);
-  const [width, setWidth] = useState(100);
-  const [height, setHeight] = useState(25);
+  const [width, setWidth] = useState(60);
+  const [height, setHeight] = useState(40);
 
   const [fps, setFps] = useState(0);
   const [angle, setAngle] = useState(0);
@@ -143,14 +143,14 @@ const AsciiComponent = () => {
   return (
     <div className="relative w-full flex flex-col items-center justify-center">
       <div className="flex flex-col items-center justify-center text-black h-[30vh] xl:w-[50vw] w-[80vw] relative">
-        <div className="mt-5 scale-[0.3] xl:scale-[0.4]">
+        <div className="mt-5 scale-[0.3] md:scale-[0.4] xl:scale-[0.6]">
           <div className="relative" style={{ transform: `scale(${scale})` }}>
             {boardState.map((row, i) => (
-              <div className="inline-block flex select-none font-mono leading-none" style={{ fontSize: 8 }} key={i}>
+              <div className="inline-block flex select-none font-mono leading-none" style={{ fontSize: 8 }} key={String(i)}>
                 {row.map((tile, j) => (
                   <div
                     className="min-w-[8px] font-bold"
-                    key={j}
+                    key={String(j)}
                     style={{ minWidth: width / 12 }}
                   >
                     {tile === 0 ? '\0' : getRandomAsciiChar()}
@@ -161,7 +161,7 @@ const AsciiComponent = () => {
           </div>
         </div>
       </div>
-      <div className="w-full flex flex-row items-center justify-between mt-[5vh] xl:mt-[15vh] space-y-4">
+      <div className="w-full flex flex-row items-center justify-between mt-[10vh] xl:mt-[20vh] space-y-4">
         <div className="flex items-center space-x-2 mt-4">
           <label htmlFor="width" className="text-stone-500 text-xs">
             Width:
@@ -170,9 +170,9 @@ const AsciiComponent = () => {
             id="width"
             type="range"
             min="50"
-            max="200"
+            max="100"
             value={width}
-            onChange={(e) => { setWidth(Number(e.target.value)); setHeight(Number(e.target.value) / 2) }}
+            onChange={(e) => { setWidth(Number(e.target.value)); setHeight(Number(e.target.value)*(2/3)) }}
             className="w-32 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
             style={{
               accentColor: '#4A90E2', // Optional: Customize the slider color

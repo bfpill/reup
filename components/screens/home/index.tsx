@@ -43,7 +43,7 @@ export default function Home() {
         </FadeIn.Item>
         <div className="flex xl:flex-row flex-col justify-between h-full gap-20">
           <FadeIn.Item>
-            <div className="z-99 w-full overflow-x-none flex items-center justify-center mt-32">
+            <div className="z-99 w-full overflow-x-none flex items-center justify-center mt-16">
               <AsciiComponent />
             </div>
           </FadeIn.Item>
