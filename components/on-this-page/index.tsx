@@ -5,7 +5,7 @@ import { cn } from "@/lib/cn";
 import { motion } from "framer-motion";
 import React, { useCallback, useEffect, useState } from "react";
 
-export const TableOfContents = ({ initialHeaderId }) => {
+export const TableOfContents = (props: { initialHeaderId? }) => {
   const [headings, setHeadings] = useState<{ id: string; text: string; level: string }[]>([]);
   const [visibleHeadings, setVisibleHeadings] = useState<Set<string>>(new Set());
   const [loaded, setLoaded] = useState(false)
@@ -59,13 +59,13 @@ export const TableOfContents = ({ initialHeaderId }) => {
   }, [getHeadings, visibleHeadings]);
 
   useEffect(() => {
-    if (initialHeaderId && loaded) {
+    if (props.initialHeaderId && loaded) {
       setTimeout(() => {
-        scroll(initialHeaderId);
-        setVisibleHeadings((prev) => new Set(prev).add(initialHeaderId));
+        scroll(props.initialHeaderId);
+        setVisibleHeadings((prev) => new Set(prev).add(props.initialHeaderId));
       }, 300);
     }
-  }, [initialHeaderId, loaded]);
+  }, [props.initialHeaderId, loaded]);
 
   const scroll = (id: string) => {
     console.log("scrolling to ", id)
