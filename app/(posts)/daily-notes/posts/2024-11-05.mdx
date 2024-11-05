@@ -23,3 +23,37 @@ I think just input/output pairs is the way to go, maybe a big enough dataset is 
 1:11 - Just finished up polishing the site so daily posts are all bundled together in one big scroll. All posts are concatenated into a huge MDX and rolled together. 
 It makes the posts much more readable as work can flow over from one day to the next. Might change up the landing page to make it more homely. 
 
+1->5:00 - improved the Lorentz attractor on the homepage so that it spins and has a variable resolution. 
+
+6->8:00 - went back to the model training and ended up scrapping the differentiable reversing. Seems like gradients just don't flow well even when using a very soft
+approximation of the update rules. Now I want to see if models trained to predict the _next_ board can be run with gradient ascent to find an input board that 
+leads to a target board. Probably wont work well, but it will be interesting to mess with L1 and other penalties as the problem is roughly like other many->one
+problems. 
+
+Anyways, turns out training models to calc forward like this gives quite nice grokking behaviour over different board sizes. Call it Conways Grok. 
+
+<div className="flex flex-row w-full h-40 mt-10 mb-[20vh]">
+  ![conways grok](/images/daily-notes/2024-11-5/conways-grok.png)
+</div>
+
+These models are accurate enough (>99.99%) to sample autoregressively. So we can run Conways with a model!
+
+First two are on a slightly undertrained 12x12 model - the glider messes up at the end!
+Last is on a 18x18 model. 
+<div className="flex flex-row mt-16 mb-32 gap-10">
+
+<div className="flex flex-row w-1/3 h-1/3 ">
+  ![conways grok](/images/daily-notes/2024-11-5/neural_glider.gif)
+</div>
+<div className="flex flex-row w-1/3 h-1/3">
+  ![conways grok](/images/daily-notes/2024-11-5/neural12x12.gif)
+</div>
+<div className="flex flex-row w-1/3 h-1/3">
+  ![conways grok](/images/daily-notes/2024-11-5/18x18.gif)
+</div>
+</div>
+
+
+
+
+
