@@ -5,7 +5,7 @@ import { cn } from "@/lib/cn";
 import { motion } from "framer-motion";
 import React, { useCallback, useEffect, useState } from "react";
 
-export const TableOfContents: React.FC<TableOfContentsProps> = ({ initialHeaderId }) => {
+export const TableOfContents = ({ initialHeaderId }) => {
   const [headings, setHeadings] = useState<{ id: string; text: string; level: string }[]>([]);
   const [visibleHeadings, setVisibleHeadings] = useState<Set<string>>(new Set());
   const [loaded, setLoaded] = useState(false)
