@@ -28,21 +28,6 @@ const route = "daily-notes";
 
 const Posts = getPosts(route);
 
-const Layout = ({ post, route }: Props) => {
-  const posts = getPosts(route);
-
-  const Seperator = () => {
-    return <div>⋅</div>;
-  };
-
-  return (
-    <React.Fragment>
-      <MDX source={post.content} />
-    </React.Fragment>
-  );
-};
-
-
 export default function Page() {
   const concatenatedContent = Posts.map(post => post.content).join("\n");
 
