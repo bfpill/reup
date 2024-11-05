@@ -26,19 +26,18 @@ export const Posts = ({ category }: PostProps) => {
           {category} {posts.length > 0 && `(${posts.length})`}
         </h2>
       </NextViewTransition>
-
-      {category === "paper2s" ? (
-        <React.Fragment key={1}>
-          <Seperator />
-          <NextViewTransition
-            href="https://max.v3rv.com/writing/papers/A%20Contrastive%20Analysis%20of%20Features%20in%20Twin%20Toy%20Transformers%20that%20(play)%20Chess"
-            target="_blank"
-            className="flex w-full justify-between py-2"
-          >
-            <p>{"A Constrastive Analysis of Transformers that (play) chess"}</p>
-            <p className="mt-0 text-muted">{"Oct 1, 2024"}</p>
-          </NextViewTransition>
-        </React.Fragment>
+      {category === "daily-notes" ? (
+        posts.map((post) => {
+          return (
+            <React.Fragment key={post.slug}>
+              <Seperator />
+              <NextViewTransition href={`/${category}/${post.slug}`} className="flex w-full justify-between py-2">
+                <p className="wrap max-w-[70%]">{post.title}</p>
+                <p className="mt-0 text-muted min-w-32 flex justify-end">{formatter.date(new Date(post.time.created))}</p>
+              </NextViewTransition>
+            </React.Fragment>
+          );
+        })
       ) : (
         posts.map((post) => {
           return (

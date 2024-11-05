@@ -1,15 +1,13 @@
 import type { Post } from "@/types";
 
 import { PostNavigation } from "@/components/post-navigation";
-import { formatter } from "@/lib/formatter";
 import { getPosts } from "@/lib/mdx";
 import { OpenGraph } from "@/lib/og";
 import { MDX } from "@/mdx-components";
+import * as FadeIn from "@/components/motion/staggers/fade";
 
-import { notFound } from "next/navigation";
 import React from "react";
-import { readingTime } from "reading-time-estimator";
-import { SummerDaysGraph } from "@/components/custom/DaysOfSummer";
+import { TableOfContents } from "@/components/on-this-page";
 
 const route = "daily-notes";
 
@@ -55,17 +53,6 @@ const Layout = ({ post, route }: Props) => {
     return <div>⋅</div>;
   };
 
-  const PublishedTime = () => {
-    return <div>Published {formatter.date(new Date(post.time.created))}</div>;
-  };
-  const UpdateTime = () => {
-    return <div>Updated {formatter.date(new Date(post.time.updated))}</div>;
-  };
-
-  const ReadingTime = () => {
-    return <div>{readingTime(post.content).minutes} minute read</div>;
-  };
-
   return (
     <React.Fragment>
       <MDX source={post.content} />
@@ -76,10 +63,29 @@ const Layout = ({ post, route }: Props) => {
 
 export default function Page({ params }: PageProps) {
   const post = Posts.find((post: { slug: string }) => post.slug === params.slug);
+  const concatenatedContent = Posts.map(post => post.content).join("\n");
 
-  if (!post) {
-    notFound();
-  }
+  const extractHeaderIdForToday = (content: string): string | null => {
+    const headerIdRegex = new RegExp(`# ${params.slug}`, 'g');
+    const match = headerIdRegex.exec(content);
+    return match ? params.slug : null;
+  };
 
-  return <Layout post={post} route={route} />;
+  const initialHeaderId = extractHeaderIdForToday(concatenatedContent);
+
+  const LazyMDX = React.lazy(() => Promise.resolve({ default: () => <MDX source={concatenatedContent} /> }));
+
+  return (
+    <React.Fragment>
+      <FadeIn.Item>
+        <div className="">
+          <React.Suspense fallback={<div>Loading...</div>}>
+            <LazyMDX />
+          </React.Suspense>
+          <div className="w-full border mt-20"/>
+        </div>
+      </FadeIn.Item>
+      <TableOfContents initialHeaderId={initialHeaderId}  />
+    </React.Fragment>
+  );
 }

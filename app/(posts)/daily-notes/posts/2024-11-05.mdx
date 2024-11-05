@@ -1,0 +1,25 @@
+---
+title: "2024-11-05"
+time:
+  created: "2024-11-05T19:24:46.167Z"
+  updated: "2024-11-05T06:19:19.634Z"
+---
+
+# 2024-11-05
+
+<div className="mt-5 mb-5">
+  <SummerDaysGraph day={"2024-11-05"}/>
+</div>
+
+9:00 - Worked for a little while on the ARENA mech interp chapters while messing with the CA training. I got impatient with the model and paused it to try out
+training with differentiable update rules (done using sigmoid), but that didn't really work out super well, low loss but model was clearly not learning so something was wrong. 
+Also tried some very poor RL where I would sample from the logits as actions and then try to use that in the loss function, but it didn't work at all (all this to get around non-differentiable update rules). 
+I think just input/output pairs is the way to go, maybe a big enough dataset is all you need. 
+
+<div className="flex flex-row w-full h-40 mt-10 mb-32">
+  ![good-loss-bad-acc](/images/daily-notes/2024-11-5/good-loss-bad-acc.png)
+</div>
+
+1:11 - Just finished up polishing the site so daily posts are all bundled together in one big scroll. All posts are concatenated into a huge MDX and rolled together. 
+It makes the posts much more readable as work can flow over from one day to the next. Might change up the landing page to make it more homely. 
+

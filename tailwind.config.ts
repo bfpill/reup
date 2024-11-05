@@ -134,7 +134,7 @@ const config: Config = {
           foreground: "var(--selection-foreground)",
         },
         highlight: {
-          background: "var(--highlight-background)",
+          background: "var(--pink-a5)",
           foreground: "var(--highlight-foreground)",
         },
         kbd: {

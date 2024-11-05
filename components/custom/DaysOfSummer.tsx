@@ -75,8 +75,6 @@ export const DaysOfSummer = () => {
     return `${year}-${month}-${day}`;
   };
 
-  const todaysDate = formatDate(new Date());
-
   return (
     <div className="flex flex-row text-center items-center">
       <div className="text-white bg-pink-500 bold opacity-0.5 rounded-full p-2 px-4 text-xs">
@@ -85,7 +83,7 @@ export const DaysOfSummer = () => {
         </h1>
       </div>
       <div className="text-white ml-2 bg-blue-500 bold opacity-0.5 rounded-full p-2 px-4 text-xs transition-colors duration-100">
-        <a href={`/daily-notes/${todaysDate}`} className="text-white underline ">
+        <a href="/daily-notes" className="text-white underline ">
           Todays Note
         </a>
       </div>

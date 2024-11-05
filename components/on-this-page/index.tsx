@@ -5,13 +5,14 @@ import { cn } from "@/lib/cn";
 import { motion } from "framer-motion";
 import React, { useCallback, useEffect, useState } from "react";
 
-export const TableOfContents = () => {
+export const TableOfContents: React.FC<TableOfContentsProps> = ({ initialHeaderId }) => {
   const [headings, setHeadings] = useState<{ id: string; text: string; level: string }[]>([]);
   const [visibleHeadings, setVisibleHeadings] = useState<Set<string>>(new Set());
+  const [loaded, setLoaded] = useState(false)
 
   const getHeadings = useCallback(() => {
     return Array.from(document.querySelectorAll("h1, h2, h3"))
-      .filter((heading) => heading.id)
+      .filter((heading) => heading.id) 
       .map((heading) => ({
         id: heading.id,
         text: heading.textContent || "",
@@ -41,7 +42,7 @@ export const TableOfContents = () => {
           visibleSet.delete(headingId);
         }
       }
-
+ 
       setVisibleHeadings(new Set(visibleSet));
     };
 
@@ -51,13 +52,24 @@ export const TableOfContents = () => {
       const element = document.getElementById(heading.id);
       if (element) observer.observe(element);
     }
-
+    setLoaded(true)
     return () => {
       observer.disconnect();
     };
   }, [getHeadings, visibleHeadings]);
 
+  useEffect(() => {
+    if (initialHeaderId && loaded) {
+      setTimeout(() => {
+        scroll(initialHeaderId);
+        setVisibleHeadings((prev) => new Set(prev).add(initialHeaderId));
+      }, 300);
+    }
+  }, [initialHeaderId, loaded]);
+
   const scroll = (id: string) => {
+    console.log("scrolling to ", id)
+
     for (const heading of Array.from(document.querySelectorAll("h1, h2, h3"))) {
       heading.setAttribute("data-highlight", "false");
     }

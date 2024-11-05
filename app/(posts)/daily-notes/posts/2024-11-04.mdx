@@ -40,13 +40,13 @@ The fun part would be having it learn the starting board for an arbitrary image 
 
 <div className="flex flex-row w-full h-40 gap-5 mb-64 mt-10">
   <div className="flex flex-row w-full h-40">
-    ![CA](/images/daily-notes/CA.gif)
+    ![CA](/images/daily-notes/2024-11-4/CA.gif)
   </div>
   <div className="flex flex-row w-full h-40">
-    ![CA](/images/daily-notes/CA_a.png)
+    ![CA](/images/daily-notes/2024-11-4/CA_a.png)
   </div>
   <div className="flex flex-row w-full h-40">
-    ![CA](/images/daily-notes/faces.gif)
+    ![CA](/images/daily-notes/2024-11-4/faces.gif)
   </div>
 </div>
 
@@ -56,7 +56,7 @@ The fun part would be having it learn the starting board for an arbitrary image 
 and try and keep going through ARENA on the colab. The data is basically given 3 as input predict 2 (or any other state which leads to 3 after a step):
 
 <div className="flex flex-row w-full h-40 mb-64 mt-10">
-  ![CA](/images/daily-notes/glider.jpg)
+  ![CA](/images/daily-notes/2024-11-4/glider.jpg)
 </div>
 
 5:24 - Paused training because I realized that because there are multiple boards at step i-1 that lead to the same board at step i, the model could be correctly generating start boards but because we're training on input output pairs the model will get penalized even if it was right. 
@@ -69,21 +69,21 @@ board that may be very different from it's prediction.
 8:20 - Back from gym and dinner. Model still puffing along but I think I'm going to change up the loss function / increase learning rate here. 
 
 <div className="flex flex-row w-full h-40 mb-64 mt-10">
-  ![CA](/images/daily-notes/w&bCAtransformer2024-11-04.png)
+  ![CA](/images/daily-notes/2024-11-4/w&bCAtransformer2024-11-04.png)
 </div>
 
 8:40 - Turns out the little tiny model (2 layer transformer, 256 d_model) was doing gods work on these outputs and definitely manages to lock down a vibe. 
 *Plot (at above loss) comparing result of running GOL update on models predicted previous state vs the input state*: 
 
 <div className="flex flex-row w-full h-40 mb-64 mt-10">
-  ![CA](/images/daily-notes/256_embed_2l_input_vs_prediction_pairs.png)
+  ![CA](/images/daily-notes/2024-11-4/256_embed_2l_input_vs_prediction_pairs.png)
 </div>
 
 Going to leave a 3 layer 512-d johnny training while I do some more arena course.
 
 10:27 - no comment
 <div className="flex flex-row w-full h-40 mb-64 mt-10">
-  ![CA](/images/daily-notes/amogus.png)
+  ![CA](/images/daily-notes/2024-11-4/amogus.png)
 </div>
 
 9:00 next day - 
@@ -92,5 +92,5 @@ but I might just try being patient and letting it converge. I think the sawtooth
 batches + the training data forcing 'almost correct' answers to a completely different 'correct' answer.
 
 <div className="flex flex-row w-full h-40 mb-64 mt-10">
-  ![CA](/images/daily-notes/w&blongerRunCATransformer.png)
+  ![CA](/images/daily-notes/2024-11-4/w&blongerRunCATransformer.png)
 </div>

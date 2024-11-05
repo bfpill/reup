@@ -9,7 +9,7 @@ const lorenz = (x, y, z, sigma, rho, beta) => {
   return [dx, dy, dz];
 };
 
-const renderLorenzAttractor = (sigma, rho, beta, x0, y0, z0, numSteps, width, height, bounds) => {
+const renderLorenzAttractor = (sigma, rho, beta, x0, y0, z0, numSteps, width, height, bounds, angle) => {
   const positions = new Float32Array(numSteps * 3);
 
   let x = x0;
@@ -33,14 +33,25 @@ const renderLorenzAttractor = (sigma, rho, beta, x0, y0, z0, numSteps, width, he
   const canvas = Array.from({ length: height }, () => Array.from({ length: width }, () => 0));
 
   for (let i = 0; i < positions.length; i += 3) {
-    const x = positions[i];
-    const y = positions[i + 1];
+    let x = positions[i];
+    let y = positions[i + 1];
+    let z = positions[i + 2];
+
+    // Apply 3D rotation around the z-axis
+    const cosAngle = Math.cos(angle);
+    const sinAngle = Math.sin(angle);
+    const rotatedX = x * cosAngle - y * sinAngle;
+    const rotatedY = x * sinAngle + y * cosAngle;
+
+    // Project the 3D coordinates onto the 2D plane
+    const projectedX = rotatedX;
+    const projectedY = rotatedY;
 
     if (Number.isFinite(minX) && Number.isFinite(maxX) && Number.isFinite(minY) && Number.isFinite(maxY)) {
       const xd = maxX - minX;
       const yd = maxY - minY;
-      const col = Math.floor(((x - minX) / xd) * (width - 1));
-      const row = Math.floor(((y - minY) / yd) * (height - 1));
+      const col = Math.floor(((projectedX - minX) / xd) * (width - 1));
+      const row = Math.floor(((projectedY - minY) / yd) * (height - 1));
 
       if (row >= 0 && row < height && col >= 0 && col < width) {
         canvas[row][col] = 1;
@@ -51,6 +62,11 @@ const renderLorenzAttractor = (sigma, rho, beta, x0, y0, z0, numSteps, width, he
   return canvas;
 };
 
+const getRandomAsciiChar = () => {
+  const asciiRange = [33, 126];
+  return String.fromCharCode(Math.floor(Math.random() * (asciiRange[1] - asciiRange[0] + 1)) + asciiRange[0]);
+};
+
 const AsciiComponent = () => {
   const sigma = 10;
   const rho = 28;
@@ -59,20 +75,22 @@ const AsciiComponent = () => {
   const y0 = 0.0;
   const z0 = 0.0;
   const timeStepRef = useRef(1);
-  const width = 100;
-  const height = 75;
+  const [width, setWidth] = useState(100);
+  const [height, setHeight] = useState(25);
 
   const [fps, setFps] = useState(0);
+  const [angle, setAngle] = useState(0);
+  const [rotate, setRotate] = useState(true);
   const lastFrameTimeRef = useRef<number | null>(null);
   const [boardState, setBoardState] = useState<number[][]>([]);
   const animationFrameIdRef = useRef<number | undefined>(undefined);
 
   // Fixed bounds based on known Lorenz attractor ranges
   const bounds = {
-    minX: -25,
-    maxX: 25,
-    minY: -30,
-    maxY: 30,
+    minX: -40,
+    maxX: 40,
+    minY: -40,
+    maxY: 40,
   };
 
   useEffect(() => {
@@ -85,7 +103,24 @@ const AsciiComponent = () => {
       }
       lastFrameTimeRef.current = currentTime;
 
-      const updatedBoardState = renderLorenzAttractor(sigma, rho, beta, x0, y0, z0, timeStepRef.current, width, height, bounds) as number[][];
+      if (rotate) {
+        setAngle((prevAngle) => prevAngle + 0.005);
+      }
+
+      const updatedBoardState = renderLorenzAttractor(
+        sigma,
+        rho,
+        beta,
+        x0,
+        y0,
+        z0,
+        timeStepRef.current,
+        width,
+        height,
+        bounds,
+        angle
+      ) as number[][];
+
       setBoardState(updatedBoardState);
 
       const timeStepDiff = 1;
@@ -101,23 +136,55 @@ const AsciiComponent = () => {
         cancelAnimationFrame(animationFrameIdRef.current);
       }
     };
-  }, []);
+  }, [angle, rotate, width, height]);
+
+  const scale = 50 / width * 5;
 
   return (
-    <div className="flex min-h-[300px] md:min-h-[700px] w-full items-center justify-center text-black mt-5">
-      <div className="relative scale-[0.5] md:scale-[1] translate-x-4">
-        {boardState.map((row, i) => (
-          <div className="inline-block flex select-none font-mono leading-none" style={{ fontSize: 8 }} key={JSON.stringify(i)}>
-            {row.map((tile, j) => (
-              <div className="min-w-[7px]" key={JSON.stringify(j)}>
-                {tile === 0 ? "\0" : "1"}
+    <div className="relative w-full flex flex-col items-center justify-center">
+      <div className="flex flex-col items-center justify-center text-black h-[30vh] xl:w-[50vw] w-[80vw] relative">
+        <div className="mt-5 scale-[0.3] xl:scale-[0.4]">
+          <div className="relative" style={{ transform: `scale(${scale})` }}>
+            {boardState.map((row, i) => (
+              <div className="inline-block flex select-none font-mono leading-none" style={{ fontSize: 8 }} key={i}>
+                {row.map((tile, j) => (
+                  <div
+                    className="min-w-[8px] font-bold"
+                    key={j}
+                    style={{ minWidth: width / 12 }}
+                  >
+                    {tile === 0 ? '\0' : getRandomAsciiChar()}
+                  </div>
+                ))}
               </div>
             ))}
           </div>
-        ))}
+        </div>
       </div>
-      <div className="absolute right-0 bottom-0 mr-20 text-stone-500 text-xs">fps = {fps}</div>
-      <div className="absolute right-0 bottom-0 text-stone-500 text-xs">t = {timeStepRef.current}</div>
+      <div className="w-full flex flex-row items-center justify-between mt-[5vh] xl:mt-[15vh] space-y-4">
+        <div className="flex items-center space-x-2 mt-4">
+          <label htmlFor="width" className="text-stone-500 text-xs">
+            Width:
+          </label>
+          <input
+            id="width"
+            type="range"
+            min="50"
+            max="200"
+            value={width}
+            onChange={(e) => { setWidth(Number(e.target.value)); setHeight(Number(e.target.value) / 2) }}
+            className="w-32 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
+            style={{
+              accentColor: '#4A90E2', // Optional: Customize the slider color
+            }}
+          />
+          <span className="text-stone-500 text-xs">{width}</span>
+        </div>
+        <div className="flex flex-row items-center space-x-4 width-[40px]">
+          <div className="text-stone-500 text-xs">fps = {fps}</div>
+          <div className="text-stone-500 text-xs">t = {timeStepRef.current}</div>
+        </div>
+      </div>
     </div>
   );
 };
