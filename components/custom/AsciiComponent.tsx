@@ -161,8 +161,8 @@ const AsciiComponent = () => {
           </div>
         </div>
       </div>
-      <div className="w-full flex flex-row items-center justify-between mt-[10vh] xl:mt-[34vh] md:mt-[26vh] space-y-4 z-100">
-        <div className="flex items-center space-x-2 mt-4">
+      <div className="w-full flex flex-row items-center justify-between mt-[10vh] xl:mt-[34vh] md:mt-[26vh] space-y-4 z-100 relative">
+        <div className="flex items-center space-x-2 mt-4 z-10">
           <label htmlFor="width" className="text-stone-500 text-xs">
             res
           </label>
@@ -180,7 +180,7 @@ const AsciiComponent = () => {
           />
           <span className="text-stone-500 text-xs">{width}</span>
         </div>
-        <div className="flex flex-row items-center space-x-4 width-[40px]">
+        <div className="flex flex-row items-center space-x-4 width-[40px] z-10">
           <div className="text-stone-500 text-xs">fps = {fps}</div>
           <div className="text-stone-500 text-xs">t = {timeStepRef.current}</div>
         </div>
