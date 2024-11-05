@@ -18,13 +18,6 @@ import remarkGfm from "remark-gfm";
 
 import { SummerDaysGraph } from "@/components/custom/DaysOfSummer";
 
-
-const lora = Lora({
-  subsets: ["latin"],
-  display: "swap",
-});
-
-
 const components: MDXComponents = {
   PreviewExample: () => {
     return (

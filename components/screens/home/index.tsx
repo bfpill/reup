@@ -7,6 +7,8 @@ import { Posts } from "@/components/posts";
 
 import { Analytics } from "@vercel/analytics/react"
 import { DaysOfSummer } from "@/components/custom/DaysOfSummer";
+import AsciiImageComponent from "@/components/custom/AsciiImage";
+
 
 const Spacer = () => <div style={{ marginTop: "24px" }} />;
 
@@ -22,7 +24,7 @@ const CurrentlyReading = () => {
       <div className="flex space-x-4 mt-10">
         {books.map((book) => (
           <a href={book.link} key={book.title} className="transform transition-transform duration-300 hover:scale-105">
-            <img src={book.cover} alt={book.title} className="h-100 object-cover" style={{ width: 'auto', height: '30vw', maxHeight: '350px'}} />
+            <img src={book.cover} alt={book.title} className="h-100 object-cover" style={{ width: 'auto', height: '30vw', maxHeight: '350px' }} />
           </a>
         ))}
       </div>
@@ -74,6 +76,11 @@ export default function Home() {
         <FadeIn.Item>
           <div className="mt-32">
             <CurrentlyReading />
+          </div>
+        </FadeIn.Item>
+        <FadeIn.Item>
+          <div className="mt-10 h-24 w-24">
+            <AsciiImageComponent imageUrl={"/images/daily-notes/2024-11-4/M.jpeg"} />
           </div>
         </FadeIn.Item>
       </FadeIn.Container>

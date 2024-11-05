@@ -9,10 +9,7 @@ import { Inter } from "next/font/google";
 import { usePathname } from "next/navigation"; // Import usePathname
 import { Analytics } from "@vercel/analytics/react"
 import { useEffect } from "react";
-// export const metadata: Metadata = {
-//   ...OpenGraph,
-// };
-
+import Head from "next/head";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -38,6 +35,9 @@ export default function RootLayout({
 
   return (
     <html lang="en" className={clsx(inter.className)} suppressHydrationWarning>
+      <Head>
+        <link rel="icon" href="/favicon.ico" />
+      </Head>
       <body>
         <Providers>
           <main className="mx-auto max-w-screen-sm overflow-x-hidden px-6 py-24 md:overflow-x-visible ">
