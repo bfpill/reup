@@ -161,7 +161,7 @@ const AsciiComponent = () => {
           </div>
         </div>
       </div>
-      <div className="w-full flex flex-row items-center justify-between mt-[10vh] xl:mt-[20vh] space-y-4">
+      <div className="w-full flex flex-row items-center justify-between mt-[10vh] xl:mt-[25vh] space-y-4">
         <div className="flex items-center space-x-2 mt-4">
           <label htmlFor="width" className="text-stone-500 text-xs">
             Width:
@@ -170,7 +170,7 @@ const AsciiComponent = () => {
             id="width"
             type="range"
             min="50"
-            max="100"
+            max="300"
             value={width}
             onChange={(e) => { setWidth(Number(e.target.value)); setHeight(Number(e.target.value)*(2/3)) }}
             className="w-32 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
