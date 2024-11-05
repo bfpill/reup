@@ -41,13 +41,13 @@ export default function Home() {
             </div>
           </div>
         </FadeIn.Item>
-        <div className="flex xl:flex-row flex-col justify-between h-full gap-20">
+        <div className="flex xl:flex-row flex-col justify-between h-full gap-3">
           <FadeIn.Item>
-            <div className="z-99 w-full overflow-x-none flex items-center justify-center mt-16">
+            <div className="z-99 w-full overflow-x-none flex items-center justify-center xl:mt-64 md:mt-64 mt-32">
               <AsciiComponent />
             </div>
           </FadeIn.Item>
-          <div className="mt-10">
+          <div className="mt-2 backdrop-blur-xs p-5 rounded-md">
             <FadeIn.Item>
               <DaysOfSummer />
             </FadeIn.Item>

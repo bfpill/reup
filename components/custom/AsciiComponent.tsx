@@ -142,11 +142,11 @@ const AsciiComponent = () => {
 
   return (
     <div className="relative w-full flex flex-col items-center justify-center">
-      <div className="flex flex-col items-center justify-center text-black h-[30vh] xl:w-[60vw] w-[80vw] relative">
-        <div className="mt-5 scale-[0.3] md:scale-[0.4] xl:scale-[0.6]">
+      <div className="flex flex-col items-center justify-center text-black h-[26vh] xl:h-[30vh] xl:w-[70vw] w-[80vw] relative">
+        <div className="mt-5 scale-[0.3] md:scale-[0.6] xl:scale-[0.8]">
           <div className="relative" style={{ transform: `scale(${scale})` }}>
             {boardState.map((row, i) => (
-              <div className="inline-block flex select-none font-mono leading-none" style={{ fontSize: 8 }} key={String(i)}>
+              <div className="inline-block flex select-none font-mono leading-none" style={{ fontSize: 10 }} key={String(i)}>
                 {row.map((tile, j) => (
                   <div
                     className="min-w-[8px] font-bold"
@@ -161,10 +161,10 @@ const AsciiComponent = () => {
           </div>
         </div>
       </div>
-      <div className="w-full flex flex-row items-center justify-between mt-[10vh] xl:mt-[25vh] space-y-4">
+      <div className="w-full flex flex-row items-center justify-between mt-[24vh] xl:mt-[25vh] md:mt-[32vh] space-y-4">
         <div className="flex items-center space-x-2 mt-4">
           <label htmlFor="width" className="text-stone-500 text-xs">
-            Width:
+            res
           </label>
           <input
             id="width"
