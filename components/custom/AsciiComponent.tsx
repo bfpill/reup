@@ -102,7 +102,7 @@ const AsciiComponent = () => {
         setFps(currentFps);
       }
       lastFrameTimeRef.current = currentTime;
-
+      
       if (rotate) {
         setAngle((prevAngle) => prevAngle + 0.005);
       }
@@ -143,7 +143,7 @@ const AsciiComponent = () => {
   return (
     <div className="relative w-full flex flex-col items-center justify-center">
       <div className="flex flex-col items-center justify-center text-black h-[26vh] xl:h-[30vh] xl:w-[70vw] w-[80vw] relative">
-        <div className="mt-5 scale-[0.3] md:scale-[0.6] xl:scale-[0.8]">
+        <div className="mt-5 scale-[0.7] md:scale-[0.6] xl:scale-[0.8]">
           <div className="relative" style={{ transform: `scale(${scale})` }}>
             {boardState.map((row, i) => (
               <div className="inline-block flex select-none font-mono leading-none" style={{ fontSize: 10 }} key={String(i)}>
@@ -151,7 +151,9 @@ const AsciiComponent = () => {
                   <div
                     className="min-w-[8px] font-bold"
                     key={String(j)}
-                    style={{ minWidth: width / 12 }}
+                    style={{ 
+                        minWidth: width / 12
+                    }}
                   >
                     {tile === 0 ? '\0' : getRandomAsciiChar()}
                   </div>

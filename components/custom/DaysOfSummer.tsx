@@ -68,13 +68,6 @@ export const DaysOfSummer = () => {
     console.log(totalDays);
   }, []);
 
-  const formatDate = (date: Date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
   return (
     <div className="flex flex-row text-center items-center">
       <div className="text-white bg-pink-500 bold opacity-0.5 rounded-full p-2 px-4 text-xs">

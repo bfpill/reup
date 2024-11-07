@@ -1,0 +1,77 @@
+---
+title: "2024-11-07"
+time:
+  created: "2024-11-07T19:24:46.167Z"
+  updated: "2024-11-07T06:19:19.634Z"
+---
+
+# 2024-11-07
+
+<div className="mt-5 mb-5">
+  <SummerDaysGraph day={"2024-11-07"}/>
+</div>
+
+
+again tired. 
+
+
+9:15 - attention only models trained well overnight, now I have a bunch of models to mess with for _after_ I do ARENA. 
+
+Seems like small boards can be solved with two layers + one head each, but a one layer couldn't solve shit and didn't exhibit the same 
+grokking as the two layer models. Leaving this for now :). 
+
+<div className="flex flex-row w-full h-40 mt-10 mb-80">
+  ![conways_grok_attn_only](/images/daily-notes/2024-11-7/conways_grok_attn_only.png)
+</div>
+ 
+Why doesn't wandb export your legend with the plot when you save it? Part of me wants to build my own pipeline lmao. 
+Mech interp / ML research should be more like swimming through the mind of the machine. something cheap could be done now
+with codegen + better pipelines. Humans are going to need different interfaces as the value of low level thinking goes down. 
+Maybe I just want pretty colors or something.
+
+Time to do some math! I'm going to take another calc class towards the end of the summer, so I think I'll finish off lin alg on MA and then start calc2 asap. 
+I want the class to be mostly revision by the time it rolls around.
+
+
+3:00 - Put away the math. Got 2/3 of the way through the placement. even a week break from math makes problems tiring and slow.
+
+4:22 - slightly golfed
+```python
+def attn_detector(cache, match_fn):
+    return [f"{layer}.{h}" for layer in [0, 1] 
+            for h, head in enumerate(cache["pattern", layer]) if match_fn(head)]
+
+current_attn_detector = lambda cache: attn_detector(cache, lambda h: h.diag().mean() > 0.4)
+prev_attn_detector = lambda cache: attn_detector(cache, lambda h: h.diag(-1).mean() > 0.8)
+first_attn_detector = lambda cache: attn_detector(cache, lambda h: h[:, 0].mean() > 0.8)
+
+print("Heads attending to current token  = ", ", ".join(current_attn_detector(cache)))
+print("Heads attending to previous token = ", ", ".join(prev_attn_detector(cache)))
+print("Heads attending to first token    = ", ", ".join(first_attn_detector(cache)))
+```
+more golf
+```python
+def generate_repeated_tokens(
+    model: HookedTransformer, seq_len: int, batch: int = 1
+) -> Int[Tensor, "batch full_seq_len"]:
+    '''
+    Generates a sequence of repeated random tokens
+
+    Outputs are:
+        rep_tokens: [batch, 1+2*seq_len]
+    '''
+    return t.tensor(
+        [model.tokenizer.bos_token_id] + 
+        [random.randint(0, model.cfg.d_vocab-1) for i in range(seq_len)]*2
+      ).unsqueeze(0).to(device)
+```
+
+8:15 - gym, groceries, cleanup 
+
+9:35 - Finished the induction heads section of the mech interp intro chapter. still in awe resources like this exist. going to be up early, bedtime. 
+
+<div className="flex flex-row w-full h-40 mt-10 mb-80">
+  ![conways_grok_attn_only](/images/daily-notes/2024-11-7/MuseumZonderGrenzen(1).jpeg)
+</div>
+
+

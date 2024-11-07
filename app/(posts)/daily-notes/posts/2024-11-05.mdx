@@ -25,6 +25,11 @@ It makes the posts much more readable as work can flow over from one day to the 
 
 1->5:00 - improved the Lorentz attractor on the homepage so that it spins and has a variable resolution. 
 
+<div className="flex flex-row w-full h-40 mt-10 mb-64">
+  ![conways grok](/images/daily-notes/2024-11-5/Lorentz.png)
+</div>
+<div className="flex flex-row w-full h-40 mt-10 mb-16"/>
+
 6->8:00 - went back to the model training and ended up scrapping the differentiable reversing. Seems like gradients just don't flow well even when using a very soft
 approximation of the update rules. Now I want to see if models trained to predict the _next_ board can be run with gradient ascent to find an input board that 
 leads to a target board. Probably wont work well, but it will be interesting to mess with L1 and other penalties as the problem is roughly like other many->one
@@ -32,9 +37,10 @@ problems.
 
 Anyways, turns out training models to calc forward like this gives quite nice grokking behaviour over different board sizes. Call it Conways Grok. 
 
-<div className="flex flex-row w-full h-40 mt-10 mb-[20vh]">
+<div className="flex flex-row w-full h-40 mt-10 mb-64">
   ![conways grok](/images/daily-notes/2024-11-5/conways-grok.png)
 </div>
+<div className="flex flex-row w-full h-40 mb-6"/>
 
 These models are accurate enough (>99.99%) to sample autoregressively. So we can run Conways with a model!
 

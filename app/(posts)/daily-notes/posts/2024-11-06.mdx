@@ -1,0 +1,63 @@
+---
+title: "2024-11-06"
+time:
+  created: "2024-11-06T19:24:46.167Z"
+  updated: "2024-11-06T06:19:19.634Z"
+---
+
+# 2024-11-06
+
+<div className="mt-5 mb-5">
+  <SummerDaysGraph day={"2024-11-06"}/>
+</div>
+
+Woke up tired as hell. Going to work on reversing the models + go back to just puffing through ARENA today. No more playing with react code. 
+
+11:00 - First run at reversing the model via gradient ascent. Looking o.k.  Going to try different input boards / optimizers / learning rates now. 
+
+*board on left was the maxmimally activating input board - target output was the glider on the right, and in the middle is the result of running the input board*
+<div className="flex flex-row w-full h-40 mt-10 mb-32">
+  ![conways grok](/images/daily-notes/2024-11-6/first_look_at_reversible.png)
+</div>
+
+I'm thinking because going backwards is one->many, maybe I can just iteratively sample from the input dist to get something. Not sure if the model will 
+converge to picking a single input. 
+
+Maximally activating, you can see we get continuous valued raw inputs which basically are the 'many' part of one->many. So when you threshold and play them they don't give the output, but when you run them through the model they do. 
+
+<div className="flex flex-row w-full h-40 mt-10 mb-16">
+  ![reverse2](/images/daily-notes/2024-11-6/max_activating.png)
+</div>
+
+* tried sharp sigmoiding the inputs to get them roughly binary
+  * didn't work
+* tried using penaltys to force the values closer to either 0 or 1 + a a sparsity penalty
+
+### 2:38 - Big progress!
+Gradient ascent has worked to find a state that leads to the next glider step. Obviously sparsity needs to be improved but I think those
+are going to be fixable! Also, not 100% sure what's going on with the edges probably can be fixed padding the loss calc or something for future models. 
+Very cool that such a complicated input maximally activates the model _and_ is correct when played out!
+
+*Note to self - sparsity pen was 0.0 and binary pen was 0.3 direct on the outs* 
+
+<div className="flex flex-row w-full h-40 mt-10 mb-10">
+  ![good glider](/images/daily-notes/2024-11-6/glider_good.png)
+</div>
+
+*500 Binary pen on input_sigmoids*
+
+<div className="flex flex-row w-full h-40 mt-10 mb-10">
+  ![good glider](/images/daily-notes/2024-11-6/500bin_pen.png)
+</div>
+
+Maybe I could overcome some of my problems by making the model think in unit vectors? or something...
+Thinking about smushing a forward model into the training pass of the rev model. board -rev-> reversed -forward-> board. 
+Anyways, I've gotten stalled with this for now, everything is too fiddly with hyperparams. I guess it's to be expected that a model wouldn't be able 
+to do this. 
+
+7:00 - Now I'm going to try and get a similar grokking chart as before but instead of board size increasing I'm going to increase num steps predicted. 
+I think I need to chill out a bit and figure out how to actually do circuit analysis - these tasks seem perfect. We should be able to linearly probe out different 
+board states on the multistep models, and hopefully find the circuits are the same. After I get the grokking chart for steps I'll try and train attention only versions. 
+
+
+

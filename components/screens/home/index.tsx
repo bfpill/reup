@@ -37,9 +37,9 @@ export default function Home() {
     <div className="relative p-8 overflow-x-hidden">
       <FadeIn.Container>
         <FadeIn.Item>
-          <div className="flex justify-between">
+          <div className="flex justify-between z-10">
             <div>
-              <h1 className="font-lora text-3xl xl:mb-16 mb-0">Maxwell Adam</h1>
+              <h1 className="font-lora text-3xl xl:mb-16 mb-0 z-10">Maxwell Adam</h1>
             </div>
           </div>
         </FadeIn.Item>
