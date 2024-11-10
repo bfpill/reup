@@ -1,0 +1,56 @@
+---
+title: "2024-11-08"
+time:
+  created: "2024-11-08T19:24:46.167Z"
+  updated: "2024-11-08T06:19:19.634Z"
+---
+
+# 2024-11-08
+
+<div className="mt-5 mb-5">
+  <SummerDaysGraph day={"2024-11-08"}/>
+</div>
+
+Up on time. Did math from 7:15 -> 8:50, 9:00 -> 9:30, 9:45 -> 10:15
+10:30 -> 11:00 revised anki + made some new cards 
+
+2:30, done some stuff. Thinking maybe It might not hurt to continue trying the training the reversible conways from 
+dataset pairs, not completely sure why I stopped. It's a good toy model for asking the interesting question of how models can learn one->many functions. 
+
+3:48 - Reading https://arxiv.org/pdf/1712.09913
+
+  <div className="flex flex-row w-full h-32 mt-10 mb-64">
+    ![visualizing_loss_landscapes_1](/images/daily-notes/2024-11-8/visualizing_loss_landscapes_1.png)
+  </div>
+  <div className="flex flex-row w-full mb-16"/>
+    * loss landscapes change with the model. This is seemingly obvious - the loss is parameterized not just by the problem but the model as well.
+    Interesting to me that the glob min for two architectures trained on the same task could be the same, but everywhere else the loss could be different. When do 
+    two different models share a slice of a loss landscape given some translation? Is there any way to tell if two different models are going
+    to implement the same solution? Could some quick and dirty measure of a landscapes complexity be used to run a model architecture search? 
+
+    * What does using batch warmups make these look like?
+    > It can be shown that the principle curvatures of a dimensionality reduced plot (with random Gaussian directions) are weighted
+    averages of the principle curvatures of the full-dimensional surface
+
+  * my favourite thing about high dim vectors: 
+    > It is well-known that two random vectors in a high dimensional space will be nearly orthogonal
+  with high probability. In fact, the expected cosine similarity between Gaussian random vectors in n dimensions is roughly $\sqrt{2/(\pi n)}$
+
+* Jesus... 'out of all parameter changes over training, which directions are the most explanatory'? I guess you could calculate partial covariance matrices or use partial SVDs
+ on each batch or something to calc this
+
+    > Let θ_i denote model parameters at epoch i, and the final parameters after n epochs of training are
+    denoted θn. Given n training epochs, we can apply PCA to the matrix M = [θ−θ_n; · · · ; θ_n−1 − θ_n],
+    and then select the two most explanatory directions. 
+
+
+4:20 - back to ARENA. 
+  Some notes on induction circuits / attention circuits: 
+    * attention outputs are just adding info to token slots in the residual stream - keys, queries, and values and are just transforms on each token slot
+    * This means if you want two tokens to attend to each other, you have to transform them into K's and Q's that are similar
+    * VK^TQ moves the value corresponding to whichever keys got "lit up" by the query into the residual stream just because similar keys and queries are high valued in K^TQ and others low valued
+    * this is basically a fuzzy dictionary - there will be noise in the atnn_output from KQ's that have slight overlap
+    * W_OV just takes a token, queries other tokens based on the head doing W_K(Resid_[token]), then writes their values to Resid_[token]
+
+
+

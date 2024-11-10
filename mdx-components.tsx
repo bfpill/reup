@@ -1,6 +1,9 @@
 import type { MDXComponents } from "mdx/types";
 import type { MDXRemoteProps } from "next-mdx-remote/rsc";
 import type { PluggableList } from "unified";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import 'katex/dist/katex.min.css';
 
 import FootnoteBackReference from "@/components/footnote/back-reference";
 import FootnoteForwardReference from "@/components/footnote/forward-reference";
@@ -10,7 +13,6 @@ import Preview from "@/components/preview";
 import { cn } from "@/lib/cn";
 
 import { MDXRemote } from "next-mdx-remote/rsc";
-import { Lora } from "next/font/google";
 import React from "react";
 import rehypePrettyCode from "rehype-pretty-code";
 import rehypeSlug from "rehype-slug";
@@ -155,9 +157,10 @@ export function MDX(props: JSX.IntrinsicAttributes & MDXRemoteProps) {
       components={components}
       options={{
         mdxOptions: {
-          remarkPlugins: [remarkGfm],
+          remarkPlugins: [remarkGfm, remarkMath],
           rehypePlugins: [
             rehypeSlug,
+            rehypeKatex,
             [
               rehypePrettyCode,
               {

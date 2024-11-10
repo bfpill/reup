@@ -1,0 +1,44 @@
+---
+title: "2024-11-09"
+time:
+  created: "2024-11-09T19:24:46.167Z"
+  updated: "2024-11-09T06:19:19.634Z"
+---
+
+# 2024-11-09
+
+<div className="mt-5 mb-5">
+  <SummerDaysGraph day={"2024-11-09"}/>
+</div>
+
+Up @ 7:30, math from 8:00 -> 10:30 - \ groceries \ - 11:20 -> 12:20. I guess I got less done than I would have liked? Or maybe math just takes a really long time. 
+
+
+Reading: https://www.lesswrong.com/posts/LncYobrn3vRr7qkZW/the-slingshot-helps-with-learning
+
+* They measure cosine similarity between parameter update steps, v interesting
+  <div className="flex flex-row w-full h-32 mt-10 mb-32">
+    ![parameter_step_cosine_sim.png](/images/daily-notes/2024-11-9/parameter_step_cosine_sim.png)
+  </div>
+
+* Your loss landscape will have a weight decay 'direction' and movement in parameter space will be driven by weight decay alone if loss is 0. When moving in the weight decay direction, eventually
+you'll hit a nonzero wall of loss, and you'll get a 'rebound' spike gradient update in the opposite direction, causing weight norm to shoot back up. 
+* No answer to why test loss goes down after slingshot. LLC goes down, meaning the model reaches a 'simpler' solution, but unsure why. 
+* this all happens because adamW momentum and variance all can get very small as you are just moving due to weight decay,
+ and then when you hit an update you are basically moved just by the gradient, as your momentum and variance will be close to 0.
+
+Now reading the official paper: https://openreview.net/forum?id=OZbn8ULouY
+
+> The norm grows rapidly sometime after the model has perfect classification accuracy on training data.
+A sharp phase transition then occurs in which the model misclassifies training samples. This phase
+change is accompanied by a sudden spike in training loss, and a deceleration in the norm growth of
+the final classification layer.
+
+* Is this a phase change? In my head the term is reserved for models slowly building up small, independent circuits until they're able to merge them. But I guess 'phase change' might just encapsulate
+the changes in loss, norm, etc. 
+
+> The features (pre-classification layer) show rapid evolution as the weight norm transitions from rapid
+growth phase to growth curtailment phase, and change relatively little at the norm growth phase.
+
+Ok. So - distinct periods of something changing.... 
+
