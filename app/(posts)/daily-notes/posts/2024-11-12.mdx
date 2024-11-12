@@ -11,9 +11,37 @@ time:
   <SummerDaysGraph day={"2024-11-12"}/>
 </div>
 
-Math from 7:50 -> 12:30
+Math from 7:40 -> 9:50, got it done way quicker today. 
 
 Notes on arena / https://transformer-circuits.pub/2022/toy_model/index.html#demonstrating: 
 
 * They directly augment the importance of a feature by adding a coeff to the loss when calculating for a given feature
+
+
+<div className="flex flex-row w-full h-32 mt-10 mb-6">
+  ![superposarena.png](/images/daily-notes/2024-11-12/superposarena.png)
+</div>
+
+I want to make a widget that takes a model with 2 or 3 neurons in each hidden layer and visualizes the weight vectors for each neuron onto a circle/sphere, 
+and then projects the prev layer activs in so you can visualize the dot product.
+
+9:00 - something done! Following the model spec from TMOS. Because our input is 3d, we can represent each neurons input weights as a vector, and the
+input as another vector - (the output of a neuron is the dot product of these two). In this case the input is just input data, but if the model was multi-layer
+then you would have the activations of the last layer make up this 'feature' vector. Gif makes it look laggy unfortunately. 
+
+> x' = ReLU(W^TWx + b)
+
+<div className="flex flex-row w-full h-32 mt-10 mb-[500px]">
+  ![toy-model-viz-2.gif](/images/daily-notes/2024-11-12/toy-model-viz.gif)
+</div>
+
+11:00 - added a bias, controls for the magnitude, relu, visualization of the projection 
+
+<div className="flex flex-row w-full h-32 mt-10 mb-[500px]">
+  ![toy-model-viz-2.gif](/images/daily-notes/2024-11-12/toy-model-viz-2.gif)
+</div>
+
+I think this is a fun way to think about neurons which maybe gets overlooked a lot. Neurons basically just learn a vector and project their input onto it. 
+Matrices can sometimes confuse people (like myself)
+
 
