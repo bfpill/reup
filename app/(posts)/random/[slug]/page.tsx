@@ -46,13 +46,13 @@ export default function Page({ params }: PageProps) {
   }
 
   return (
-    <div className="absolute top-0 -left-2 flex w-screen items-center justify-center bg-[#242424] pt-20 md:pt-20">
+    <div className="absolute top-0 -left-2 flex w-screen h-screen items-center justify-center bg-[#242424] pt-20 md:pt-20">
       <div className="h-full w-full overflow-y-auto">
         <div className="absolute top-10 left-10 text-white">
           <Breadcrumb />
         </div>
         <div className="h-full">
-          <div className="flex h-screen w-screen flex-col overflow-auto">
+          <div className="flex h-screen w-screen flex-col overflow-auto -mt-32">
             <iframe
               src="https://model-viz.vercel.app"
               className="h-full w-full border-none"
