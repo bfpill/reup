@@ -1,0 +1,89 @@
+---
+title: "2024-11-14"
+time:
+  created: "2024-11-14T19:24:46.167Z"
+  updated: "2024-11-14T06:19:19.634Z"
+---
+
+# 2024-11-14
+
+<div className="mt-5 mb-5">
+  <SummerDaysGraph day={"2024-11-14"}/>
+</div>
+
+7:45 -> coffee + math
+10:45 -> done w math
+
+3:51
+
+there's something unique about writing code that just does shit to tensors, it really breaks you out of the for loop mindset
+
+
+```python
+    def generate_anticorrelated_features(
+        self, batch_size: int, n_anticorrelated_pairs: int
+    ) -> Float[Tensor, "batch inst 2*n_anticorrelated_pairs"]:
+        """
+        Generates a batch of anti-correlated features. For each pair `batch[i, j, [2k, 2k+1]]`, each
+        can only be non-zero if the other one is zero.
+        """
+        p = self.feature_probability[:, [0]]
+        assert t.all(self.feature_probability == p)
+        assert p.max().item() <= 0.5, "For anticorrelated features, must have 2p < 1"
+    
+        mags = t.rand(batch_size, self.cfg.n_inst, 2 * n_anticorrelated_pairs, device=p.device)
+        one_pres = (t.rand(batch_size, self.cfg.n_inst, n_anticorrelated_pairs, device=p.device) <= 2 * p)
+        pres = t.randint(0, 2, (batch_size, self.cfg.n_inst, 1), device=p.device).bool()
+        
+        mask = t.cat([pres, ~pres], dim=-1) * one_pres.repeat_interleave(2, dim=-1)
+        return mags * mask
+```
+
+in the Lex/Dario/Amanda/Chris podcast Chris Olah said mentioned how the core idea of the superposition hypothesis is that models are simulating much higher dim models, and that
+it's likely gradient descent is actually navigating a much higher dimensional, sparse space, which it is learning to _project down_ into our comparatively teeny matrices we give them. Compressed sensing
+allows us to recreate sparse, high dim matrices from dense, low dim projections - note to self to learn more @TODO. A big gap in my knowledge is this + information theory; even though I enjoy tickling 
+myself with thoughts about 'bits' and 'entropy' etc etc I really couldn't have a clue. 
+
+Cool book - https://www.amazon.com.au/Introduction-Systems-Biology-Principles-Biological/dp/1584886420
+
+Note to self on asymmetric superposition: 
+
+If a neuron represents some number of features in superposition, and it's weights for these features (assuming a toy model where inputs _are_ features?) are *asymmetric*, meaning Wf1 $\gg$ Wf2 or Wf2 $\ll$ Wf1, then the model has chosen to allow
+*one feature to heavily interfere with the other*, but not the other way around. This is because even a small activation of f1 when Wf1 $\gg$ Wf2 will completely obliterate f2, but a little interference of f2 when f1 is present won't hurt f1. 
+The 'output' weights (output weights? weird term) of the neuron can implement the reciprocal of W, so that large and small _true_ activations of f1 and f2 are normalized, but this reciprocal normalization messes up when 
+The issue is that if Wf1 and Wf2 are both significant, the reciprocal output weights fail to normalize and instead boost the norm. The model can then use a later neuron to _inhibit_ this large positive activation by flipping it's sign and throwing
+it under the ReLU to dampen/chop it. This allows one feature to dominate or "mask" another + selectively tune which features are allowed to interfere.
+
+
+8:00 -> Got sniped into TracR transformer compilation, want to train SAE's / do some other exps on these sparse models. 
+
+- [x] Original Tracr paper: https://arxiv.org/pdf/2301.05062
+- [ ] learning transformer programs: https://proceedings.neurips.cc/paper_files/paper/2023/file/995f693b73050f90977ed2828202645c-Paper-Conference.pdf
+- [ ] looped transformers https://proceedings.mlr.press/v202/giannou23a/giannou23a.pdf
+- [ ] automated circuit discovery for mech interp: https://arxiv.org/pdf/2304.14997
+- [x] original rasp paper: https://arxiv.org/pdf/2106.06981
+
+
+Worries: 
+
+Tracr models are too simple to apply a SAE
+* They are already overcomplete? what is the information density of a tracr program x, what is the mono-semantic limit of the model size for program x? 
+* Can we combine programs together? Might have to actually write rasp but oh well. 
+* read and write to resid with trained w^t, compressing features into superposition, then compare found features to the features found in the full dim, sparser model. But how can we quantify 'features' in the larger model? 
+
+10:30 -> first things first, train an encoder on the decompressed models to see what happens
+
+As expected training is trivial, residual stream variation is _tiny_ compared to real models (already v decomposed). Will have to investigate if we can even get anything feature-like into the enc when 
+it is this sparse. I doubt sae's will help with anything when the model is already orthogonal etc. 
+
+<div className="flex flex-row w-full h-32 mt-10 mb-32">
+  ![tracr-loss-sort](/images/daily-notes/2024-11-14/tracr-loss-sort.png)
+</div>
+
+
+
+
+
+
+
+

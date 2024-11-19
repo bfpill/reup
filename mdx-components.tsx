@@ -1,6 +1,7 @@
 import type { MDXComponents } from "mdx/types";
 import type { MDXRemoteProps } from "next-mdx-remote/rsc";
 import type { PluggableList } from "unified";
+
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import 'katex/dist/katex.min.css';

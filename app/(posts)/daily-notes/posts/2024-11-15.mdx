@@ -1,0 +1,115 @@
+---
+title: "2024-11-15"
+time:
+  created: "2024-11-15T19:24:46.167Z"
+  updated: "2024-11-15T06:19:19.634Z"
+---
+
+# 2024-11-15
+
+<div className="mt-5 mb-5">
+  <SummerDaysGraph day={"2024-11-15"}/>
+</div>
+
+8:30 -> 11:20 coffee + math
+11:30 lunch + code
+
+Notebooks are cool until you restart and realize you've been using variables that don't exist anymore for the last 10 hours. Time to re-do all the runs...
+
+Tracr sae scratchpad: 
+
+* SAE's work like normal on the decompressed models, not sure how to interpret their features though
+* can we use the fact that we know what layer is doing to diff encoder acts on different layers? 
+
+* Here's a hist of firing frequncies on a larger d_mult model, works fine:
+
+<div className="flex flex-row w-full h-32 mt-10 mb-48">
+  ![tracr-sae-hist](/images/daily-notes/2024-11-15/tracr-hist.png)
+</div>
+
+* Sparsity vs non-zero sae activation count over the dataset @ l1 = 0.1
+
+<div className="flex flex-row w-full h-32 mt-10 mb-80">
+  ![tracr-sae-hist](/images/daily-notes/2024-11-15/sparsity-vs-nonzero-count.png)
+</div>
+
+* Same but at l1 = 1 and over 10 epochs per sae instead of 7
+
+Back to the original paper: 
+> We use a single linear projection W ∈ RD×d
+to compress the disentangled residual stream with size
+D to a smaller space with dimension d < D. We modify the model to apply WT whenever it reads
+from and W whenever it writes to the residual stream (see Figure 6). We freeze all other weights and
+train only W using stochastic gradient descent (SGD). *Since vanilla Tracr models are sparse and
+have orthogonal features, this process can be viewed as learning the projection from a "hypothetical
+disentangled model" to the “observed model" described by Elhage et al. (2022b)*
+
+Ok. The Tracr models "are sparse and have orthogonal features" - We want to compress a tracr models residual stream, apply the sae, and find a method/metric for comparing the sae activations to the the
+decompressed residual streams 'true' features. 
+
+Seems to me that we don't need to 'freeze' the models weights and train the read/write W _through_ the tracr model, we can just train the autoencoder directly on resid activs
+
+Ok. Going through and replicating their training of the encoder on the sort task. 
+
+Maybe this is stupid. train an autoencoder to encode down, any 'sparse' autoencoder will just replicate the W^T? But the relu will just force the projection up to be different than W^T... Maybe some part of the SAE will not play nice with 
+faithfully reconstructing the acts. 
+
+I think a next step might be to get a comparative performance analysis of SAE's trained on the same models compressed and regular residual streams. 
+* How many features does an sae on the compressed vs decompressed learn? 
+* Are these features similar? 
+* Can we find identical features? 
+  * cosine sim, manual inspection, etc
+* what do the PCA of the two sae activs look like?
+
+Quite similar, which is a nice sign:
+
+<div className="flex flex-row w-full h-64 mt-10 mb-64">
+  ![tracr-sae-hist](/images/daily-notes/2024-11-15/pca_comp_reg.png)
+</div>
+
+
+Number of significant singular values in the orthogonal residual stream is roughly = num features? So we take the cosine sim between the SAE feats and the PCA resid feats... 
+
+Activation sparsity for two same-size dictionary SAE's, one trained on the compressed residual stream and one on the regular, same l1 pen. 
+
+```
+Regular Activatiosns Sparsity:  83.5981125
+Compressed Activations Sparsity:  78.2952375, 
+
+Regular Activations Sparsity:  75.8853125,
+Compressed Activations Sparsity:  80.319125
+```
+
+
+Very high R^2 when training a linear transform between the two! Still with a 1:1 dictionary size
+```
+Mean Squared Error: 0.05293504521250725
+R^2 Score: 0.943285346031189
+```
+
+Cosine sim between the principal components of the transformed features from the 'compressed' SAE and the regular, d_mult=1: 
+
+<div className="flex flex-row w-full h-64 mt-10 mb-96">
+  ![tracr-sae-hist](/images/daily-notes/2024-11-15/1xd_mult_feat_sim_pca.png)
+</div>
+
+Finally getting somewhere nice. 
+
+The same but for SAE's with d_mult=2, we can see PC's are less aligned. Less variation in smaller solution spaces? 
+
+<div className="flex flex-row w-full h-64 mt-10 mb-96">
+  ![tracr-sae-hist](/images/daily-notes/2024-11-15/feat_sim_pca_transformed.png)
+</div>
+
+
+11:45 - Signing off, tomorrow I'm going to try and map those top 10ish principal components back to dataset examples for each, then finally compare this to what TracR is meant to be doing
+
+
+
+
+
+
+
+
+
+
