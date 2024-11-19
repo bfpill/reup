@@ -1,8 +1,8 @@
 ---
 title: "Toy SAE's Trained on 'Orthogonal' Data, Results"
 time:
-  created: "2024-19-13T09:56:06.854Z"
-  updated: "2024-19-13T06:19:19.634Z"
+  created: "2024-11-19T09:56:06.854Z"
+  updated: "2024-11-19T06:19:19.634Z"
 ---
 
 # Toy SAE's Trained on 'Orthogonal' Data, Results
@@ -17,7 +17,7 @@ For example, this model (dictionary size 1) has a Mean Max Cosine similarity bet
 <img src="/images/in-progress/saes-on-orthog/Data Sparsity 0.98 Cosine Similarity (2).png" alt="Cosine Similarity"/>
 <img src="/images/in-progress/saes-on-orthog/Data Sparsity 0.98 DMULT 1 Activations (4).png" alt="Activations"/>
 
-The 'Cosine Similarity between Activations' graph shows the cosine similarity between hidden layer activations for each input feature (note the mislabeled axis, sorry). The graph is ~Identity, meaning different input features activate completely different hidden neurons. We also see that the hidden activations for each residual feature are ~a permutation of the identity—the model learned to assign each input feature to a *single* neuron, which is exactly what we want to see.
+The 'Cosine Similarity between Activations' graph shows the cosine similarity between hidden layer activations for each input feature. The graph is ~Identity, meaning different input features activate completely different hidden neurons. We also see that the hidden activations for each residual feature are ~a permutation of the identity—the model learned to assign each input feature to a *single* neuron, which is exactly what we want to see.
 
 Here's an example of a model that _failed_ to learn a faithful representation of the feature set—it had a much lower L1 coefficient, meaning it wasn't penalized as much for the magnitude of its hidden activations.
 
@@ -26,7 +26,8 @@ Here's an example of a model that _failed_ to learn a faithful representation of
   <img src="/images/in-progress/saes-on-orthog/Data Sparsity 0.98 DMULT 1 Activations (3).png" alt="Failed Activations"/>
   <img src="/images/in-progress/saes-on-orthog/Data Sparsity 0.98 DMULT 1 Decoder Weights.png" alt="Failed Decoder Weights"/>
 
-Looking at the activations and decoder weight graphs for this model, we can see that the model is putting features into superposition—some decoder weights look to multiple neurons in the hidden layer to reconstruct the input feature. Interestingly, we can see in the above graphs that the model is putting features 3, 4, and 6 into superposition, and they form a triangle. When decoding a feature in superposition, the decoder fires strongly negative on one feature out of the three (one 'vertex' of the triangle)—this negative firing negates the positive firing along the shared dimension of a mismatch. On the other hand, when there's no superposition, the decoder weights will just be a scaled transpose of the hidden activations for each feature.
+Looking at the activations and decoder weight graphs for this model, we can see that the model is putting features into superposition—some decoder weights look to multiple neurons in the hidden layer to reconstruct the input feature. Interestingly, we can see in the above graphs that the model is putting features 3, 4, and 6 into superposition, forming a triangle (Same for 10, 12, and 15).
+When decoding a feature in superposition, the decoder fires strongly negative on one feature out of the three (one 'vertex' of the triangle)—this negative firing negates the positive firing along the shared dimension of a mismatch. Note, when there's no superposition, the decoder weights will just be a scaled transpose of the hidden activations for each feature.
 
 (The model putting features into superposition is not the same thing as feature splitting—the data is not correlated, so there should be no 'similarity' between features. Instead, the model is just trying to reduce L1 loss.)
 
