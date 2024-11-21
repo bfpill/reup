@@ -59,21 +59,12 @@ export default function Page({ params }: PageProps) {
     <>
       {
         post.title === "Superposition Viz" &&
-        <div className="absolute top-0 -left-2 flex w-screen h-screen items-center justify-center bg-slate-200 pt-20 md:pt-20">
-          <div className="h-full w-full overflow-hidden bg-transparent">
-            <div className="absolute top-10 right-10 text-white w-96">
-              <Breadcrumb />
-            </div>
-            <div className="h-full mt-16">
-              <div className="flex h-screen w-screen flex-col overflow-hidden -mt-32">
-                <iframe
-                  src={iframeSrc}
-                  className="h-full w-full border-none"
-                  title="Embedded Page"
-                />
-              </div>
-            </div>
-          </div>
+        <div className="absolute top-0 left-0 flex w-screen h-screen items-center justify-center bg-slate-200">
+          <iframe
+            src={iframeSrc}
+            className="h-screen w-screen"
+            title="Embedded Page"
+          />
         </div>
       }
 
