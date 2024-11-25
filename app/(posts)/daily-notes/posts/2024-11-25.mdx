@@ -1,0 +1,73 @@
+---
+title: "2024-11-25"
+time:
+  created: "2024-11-25T19:24:46.167Z"
+  updated: "2024-11-25T06:19:19.634Z"
+---
+
+# 2024-11-25
+
+<div className="mt-5 mb-5">
+  <SummerDaysGraph day={"2024-11-25"}/>
+</div>
+
+Got back into it today! last couple days has been working on a small writeup + another superposition visualizer and just doing math like usual. 
+
+The writeup can be found here: https://max.v3rv.com/in-progress/saes-on-orthogonal-data
+
+And the superpos thing can be found here: https://max.v3rv.com/random/superposition-viz
+<div className="flex flex-row w-full h-32 mt-10 mb-96">
+	![spviz.png](/images/daily-notes/2024-11-25/superpos-viz.png)
+</div>
+
+You might have to zoom out a bit for bigger models, my bad. 
+
+Also been thinking more about tracr models and SAE's trained on orthogonal data, here's a small writeup: 
+
+Starting to think about the big project - currently thinking about the relation of superpos/robustness, inspired by this tweet: https://twitter.com/livgorton/status/1849573082371064267. 
+
+Not really read on robustness stuff, so today I've just been going through some papers, notes dumped. 
+
+### Adversarial Examples Are Not Bugs, They Are Features
+
+Dataset level robustness
+* Construct a robust dataset by training a robust model on the original, non spurious dataset, then gradient ascent to maximize *used* feature activation similarity on random input from said dataset. This adds spurious features to the real dataset, constructing a spurious dataset
+* This basically removes the non-robust features from the dataset (the features that the robust model didn't use). 
+* You can improve robustness by training on a dataset that is robust
+* Adversarial examples transfer between models because they arise from non-robust features
+* PGD is a method of maximizing loss for a specific input while keeping within a similarity bound of the original image. This can be used to generate adversarial examples. 
+* Non robust features are shared between models because models all use spurious features to perform well - loss is correlated strongly with spurious feature transfer
+
+Loss function level adversarial prevention
+* loss is the maximum loss of any perturbed input in the valid set of perturbations
+
+### Learning from Incorrectly Labeled Data
+* You can train a model, use it to generate incorrect labels on an OOD dataset or collect incorrect labels on in distribution examples into a new dataset, and then train a model on this new dataset - this model will recover performance on the _original_ dataset because it has learned spurious correlations 'distilled' from the parent model - this is an example of feature distillation. "information about the trained model is being “leaked” into the dataset."
+
+### The Space of Transferable Adversarial Examples
+
+* Fast Gradient Sign Method is good for 'finding multiple' adversarial directions, $\hat{x} = x +\epsilon \cdot \nabla_{x}sign(L(x, y))$. Can use a normalized L instead of sign for different norms
+* Finds decision boundaries in a low dimensional space by calculating 'directions' from an input point to another point, and then find the boundary via 
+$$argmin f(x + \epsilon \cdot d) \neq f(x)$$
+* Then you can calculate distances between models boundaries by finding the abs of the difference between the distances to the boundary for two models on one point $x_{1}$
+* If the distance between model decision boundaries is small, then the models are likely to both misclassify the same adversarial examples
+* 'Rather, the defenses prevent white-box attacks because of gradient masking [19], i.e., they leave the decision boundaries in roughly the same location but damage the gradient information used to craft adversarial examples.'
+	* Disgusting? How does this work? 
+	* 'Gu et al. introduce a new ML model, which they name deep contractive networks'
+	* Smoothness penalty by taking the Frobenius norm of an approximation of the model’s Jacobian. Yields bad performance but better adversarial prevention
+	
+		* ***What does a smooth loss landscape mean for superposition? Anything?*** 
+* 'For most pairs of models and directions, ***the minimum distance from a test input to the decision boundary is larger than the distance between the decision boundaries of the two models*** in that direction. For the adversarial direction, this confirms our hypothesis on the ubiquity of transferability: ***for an adversarial example to transfer, the perturbation magnitude needs to be only slightly larger than the minimum perturbation required to fool the source model.'***
+* Cute XOR example where linear model adversarial attacks don't transfer to a quadratic model
+
+
+### Ensemble everything everywhere: Multi-scale aggregation for adversarial robustness
+
+* 'It is often believed that by performing such a training we are communicating to the machine the implicit human visual classification function'. Nice. Not bugs paper said the same thing
+* 'Interpretability-Robustness Hypothesis: A model whose adversarial attacks typically look human-interpretable will also be adversarially robust.'
+* Earlier layers seem to be naturally resilient to adversarial attacks, final layers are the ones that mess up
+	* 'We can therefore confirm that indeed the activations of attacked images do not look like the target class in the intermediate layers, which offers two immediate use cases: 1) as a warning flag that the image has been tempered with and 2) as an active defense, which is strictly harder.'
+* Finetuning network needed low learning rate to get good adversarial performance
+* When doing maximally activating - 'we add random jitter in the x-y plane and random pixel noise, and design the attack to work on a set of models'. How much of the result can be attributed here? 
+* What is happening to the loss landscape as you do gradient ascent over multiple models and input resolutions at the same time? Does this just make it smoother? Would this kind of search work on a very choppy loss landscape like reverse-GOL. 
+* Jitter is good. All resolutions is good. 
