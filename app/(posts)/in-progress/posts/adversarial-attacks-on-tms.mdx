@@ -67,7 +67,7 @@ Now, to see whether *non-analytic attacks* (which perturb more than one feature)
 <div className="mt-5"/>
 <img src="/images/adv-sup/FSGD_feature_change_vs_feature_dimensionality.png" alt="FSGD Attack Average Change"/>
 
-When constrained, an optimal attack would want to maximize output change per unit of perturbation. In this small model, it's reasonable to expect a constrained attack would choose to perturb features with the largest gradient norm. We can get simulate this by modifying FSGD (or PGD) to only perturb along the top-k features w.r.t gradient norm. Here we see that features with lower fractional dimensionality get targeted much more often (Again on the MNIST model).
+When constrained, an optimal attack would want to maximize output change per unit of perturbation. In this small model, it's reasonable to expect a constrained attack would choose to perturb features with the largest gradient norm. We can get simulate this by modifying FSGD (or PGD) to only perturb along the top-k features w.r.t gradient norm. Here we see that features with lower fractional dimensionality get targeted much more often (Again on the MNIST model).  To make sure that top-K features aren't disproportionately representative of features with low dimensionality, empirically I find that 61.18% of Top-K features have lower feature dimensionality than average, compared to 52.68% of Non-Top-K features.
 
 ### *Top-K* FSGD Attack Average Change Per Feature vs Feature Dimensionality (Log Scale)
 
