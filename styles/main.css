@@ -18,11 +18,6 @@
 @tailwind utilities;
 
 @layer base {
-  /*
-  * We are using the Radix UI Colors package to generate a set of color variables that can be used in the project.
-  * @see: https://colors.radix-ui.com/
-  */
-
   :root {
     --bg: var(--gray-1);
     --fg: var(--gray-12);
@@ -47,7 +42,6 @@
     --moz-osx-font-smoothing: grayscale;
 
     font-variant-ligatures: common-ligatures;
-    text-wrap: pretty;
     text-rendering: optimizelegibility;
   }
 
@@ -145,10 +139,6 @@
       margin-top: 24px;
     }
 
-    /*
-    * This handles our highlighting on selection of a table of contents item.
-    */
-
     [data-highlight] {
       @apply relative;
     }
@@ -164,10 +154,6 @@
     [data-highlight="false"]::before {
       @apply bg-transparent scale-y-100;
     }
-
-    /* 
-    * Here we are setting up the styles for our footnotes and references.
-    */
 
     .footnotes {
       position: relative;
@@ -210,18 +196,6 @@
     }
   }
 
-  /* 
-  * We are using rehypye-pretty to style the code blocks in the project.
-  * rehype-pretty-code is a Rehype plugin powered by the shiki syntax highlighter that provides beautiful code blocks for Markdown or MDX. 
-  * It works on both the server at build-time (avoiding runtime syntax highlighting) and on the client for dynamic highlighting.
-  * @see: https://rehype-pretty.pages.dev/
-  */
-
-  /* 
-  * Here we are setting up the styles needed to enable theme-aware code blocks.
-  * @see: https://rehype-pretty.pages.dev/#multiple-themes-dark-and-light-mode
-  */
-
   html {
     code[data-theme*=" "],
     code[data-theme*=" "] span {
@@ -237,11 +211,6 @@
       }
     }
   }
-
-  /* 
-  * Here we are setting up the styles needed to enable line numbers in code blocks.
-  * @see: https://rehype-pretty.pages.dev/#line-numbers
-  */
 
   html {
     code[data-line-numbers] {
@@ -280,11 +249,6 @@
       box-shadow: 0 0 0 1px var(--kbd-border);
     }
   }
-
-  /* 
-  * Here we are just some additional styles to make the code blocks look better.
-  * @see: https://rehype-pretty.pages.dev/#styles
-  */
 
   * {
     pre {

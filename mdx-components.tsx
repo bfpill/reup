@@ -2,9 +2,9 @@ import type { MDXComponents } from "mdx/types";
 import type { MDXRemoteProps } from "next-mdx-remote/rsc";
 import type { PluggableList } from "unified";
 
+import 'katex/dist/katex.min.css';
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
-import 'katex/dist/katex.min.css';
 
 import FootnoteBackReference from "@/components/footnote/back-reference";
 import FootnoteForwardReference from "@/components/footnote/forward-reference";
@@ -24,19 +24,15 @@ import { SummerDaysGraph } from "@/components/custom/DaysOfSummer";
 const components: MDXComponents = {
   PreviewExample: () => {
     return (
-      <div className="min- flex h-10 w-32 items-center justify-center rounded-lg border border-yellow-6 bg-yellow-3 text-yellow-11">
-        <div className="overflow-x-auto">
-          <div className="min-w-full">
-            <div className="min-w-full">
-              <div className="min-w-full">Showcase</div>
-            </div>
-          </div>
+      <div className="flex h-10 w-32 items-center justify-center rounded-lg border border-yellow-6 bg-yellow-3 text-yellow-11">
+        <div>
+          Showcase
         </div>
       </div>
     );
   },
   Preview: ({ children, codeblock }) => <Preview codeblock={codeblock ? codeblock : undefined}>{children}</Preview>,
-  Image: ({ caption, alt, ...props }) => <MDXImage {...props} caption={caption} alt={alt} />,
+  Image: ({ caption, alt, ...props }) => <MDXImage {...props} caption={caption} alt={alt} />, 
   h1: ({ children, id }: React.HTMLAttributes<HTMLHeadingElement>) => {
     if (id?.includes("footnote-label")) {
       return null;
@@ -77,15 +73,15 @@ const components: MDXComponents = {
       </Link>
     );
   },
-  em: ({ children, className, ...props }: React.HTMLAttributes<HTMLElement>) => {
+  em: ({ children }: React.HTMLAttributes<HTMLElement>) => {
     return <span className="text-gray-400 italic">{children}</span>;
   },
   blockquote: ({ className, ...props }: React.HTMLAttributes<HTMLElement>) => (
     <blockquote className={cn("mt-6 border-gray-4 border-l-2 pl-6 text-muted", className)} {...props} />
   ),
   table: ({ className, ...props }: React.HTMLAttributes<HTMLTableElement>) => (
-    <div className="my-6 w-full overflow-hidden overflow-y-auto">
-      <table className={cn("w-full overflow-hidden", className)} {...props} />
+    <div className="my-6 w-full overflow-x-auto">
+      <table className={cn("w-full", className)} {...props} />
     </div>
   ),
   th: ({ className, ...props }: React.HTMLAttributes<HTMLTableCellElement>) => (
@@ -161,7 +157,7 @@ export function MDX(props: JSX.IntrinsicAttributes & MDXRemoteProps) {
           remarkPlugins: [remarkGfm, remarkMath],
           rehypePlugins: [
             rehypeSlug,
-            rehypeKatex,
+            rehypeKatex, // added rehypeKatex for server-side LaTeX rendering
             [
               rehypePrettyCode,
               {

@@ -1,0 +1,138 @@
+---
+title: "Adversarial attacks and Superposition, Report"
+time:
+  created: "2024-11-19T09:56:06.854Z"
+  updated: "2024-11-19T06:19:19.634Z"
+---
+
+# Toy Models Of Superposition
+
+Toy Models Of Superposition has a section where they show a strong correlation between the susceptibility of their toy model to adversarial attacks and the 'amount' of superposition which their model is exploiting. Their model is a simple ReLU *auto-encoder* $Relu(W^TWx + b)$. They calculate this 'amount' of superposition as the 'number of features per dimension', which is the reciprocal of how they defined feature dimensionality: 
+
+$$
+\text{Feature Dimensionality } (D^*) = \frac{||W_{i}||^2}{\sum(\hat{W}\cdot W_{j})^2}
+$$
+$$
+\text{Features Per Dimension} = \frac{1}{D^*} = \frac{||W_{i}||^2}{m}.
+$$
+where $m$ is the number of features.
+
+Below is the chart from the paper (link: https://arc.net/l/quote/laarnbmf)
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/Screenshot-2024-12-02-at-6.45.07-PM.png" alt="Correlation Chart"/>
+
+I think the result, although interesting and notedly preliminary, is misleading, primarily due to the setup of their toy model. My reasoning is as follows: 
+* Basically, because the toy model they use is an autoencoder, when perturbing any input feature that *isn't* in superposition in the hidden layer your loss won't change as the output will still match the input. On the other hand, when you change a feature that *is* represented in superposition, you can change the decoding of the model on *other* features, meaning a different input/output and a change to the L2. 
+* Concretely, because the model has only one layer, the Jacobian of the encoder will be the identity if no features are in superposition. An identity Jacobian implies no cross-feature interference (any change to a single input component won’t spill over into other features). Because they use MSE, a non-identity Jacobian (resulting from superposition) is what allows a perturbation to change the loss at all. 
+* Their found correlation holds strongly because as you increase superposition you're just increasing the number of 'other' features you can change in the output, and is not necessarily reflective of non-encoder models. The setup is a bit of a 'bug' for the adversarial task.
+* Replicating their setup, this prediction holds on their model, and testing on a non-encoder model seems to show the relationship does not hold nearly as dramatically on normal models. I'll argue for this empirically below.
+
+### Empirical Evidence
+
+I replicated their toy model setup, training the ReLU model and using the same synthetic data setup. To induce predictable superposition, I tweaked the data so certain features were correlated and lower-importance, which does a good job encouraging the model to put them into superposition. Following the analytic method of attack detailed in the paper, $\delta  = \lambda(W^TW)_{i}​/∣∣(W^TW)_{i}∣∣_{2}$ , we can see that no feature not in superposition has the ability to significantly change the loss. 
+
+### TMS Impact of Feature Perturbations on MSE
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/Screenshot-2024-11-26-at-9.41.36-PM-1.png" alt="Impact on MSE"/>
+
+*Perturbing features not in superposition is essentially unable to impact the loss. The small amount of change for features not in superposition is likely from the tiny amount of noise left in the weights.*
+
+Here is a visual representation of the ability of an input feature to change an output feature for a model that has features 1-7 and 10-13 in superposition (essentially an empirical Jacobian):
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/Screenshot-2024-12-02-at-6.57.19-PM.png" alt="Empirical Jacobian"/>
+
+Plotting the correlation between the average MSE change when analytically perturbing the input over a large number of samples, we see a strong trend where a decrease in feature 'dimensionality' results in a larger change to the MSE. 
+
+### TMS Average MSE vs Feature Dimensionality
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/p4.png" alt="MSE vs Feature Dimensionality"/>
+
+To sanity check whether this very nice looking trend carries over to other models, I trained a non-encoder model, specifically a one layer ReLU model trained on MNIST. Interestingly, we see _some_ parallel between feature dim and loss, but not to the same extent. 
+
+# 1 Layer ReLU MNIST Model
+
+## Effect of Analytically Perturbing Input Feature vs Feature Dimensionality (1 Layer ReLU MNIST Model)
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/p5.png" alt="MNIST Perturbation Effect"/>
+
+Now, to see whether *non-analytic attacks* (which perturb more than one feature) make use of this pattern we can plot feature dimensionality vs how often an analytic attack uses a feature in its attack. Naively using a common algorithm like Fast Sign Gradient Descent (FSGD) or Projected Gradient Descent (PGD) won't show this correlation because they perturb *all* features in the direction of the gradient, so when you average over a batch of data you end up with no correlation between $D_i$ and Attack Frequency. For example, here's the average frequency of a feature being used in an attack vs feature dimensionality:
+
+### FSGD Attack Average Change Per Feature vs Feature Dimensionality (Log Scale)
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/FSGD_feature_change_vs_feature_dimensionality.png" alt="FSGD Attack Average Change"/>
+
+When constrained, an optimal attack would want to maximize output change per unit of perturbation. In this small model, it's reasonable to expect a constrained attack would choose to perturb features with the largest gradient norm. We can get simulate this by modifying FSGD (or PGD) to only perturb along the top-k features w.r.t gradient norm. Here we see that features with lower fractional dimensionality get targeted much more often (Again on the MNIST model).
+
+### *Top-K* FSGD Attack Average Change Per Feature vs Feature Dimensionality (Log Scale)
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/Sparse_Attack_feature_change_vs_feature_dimensionality-1.png" alt="Top-K FSGD Attack Average Change"/>
+*This correlation reinforces what we would expect - features in superposition are more involved in the loss, so their gradients are naturally bigger, which leads to them being targeted more often in a Top-K attack. Note also that features which are especially useful in predicting the output should also have large gradients*
+
+We can also directly inspect the average perturbations over the dataset vs the feature dimensionality. 
+
+### Average Perturbation and Feature Dimensionality of Input
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/feat_dim_over_image_vs_attack_victims.png" alt="Average Perturbation and Dimensionality"/>
+
+*Features in the center of the input image have a lower dimensionality. Visualizing the average perturbation per feature over a large batch, we can see, for the top-k FSGD, that these features in the center are the ones being attacked most, and also that the two graphs are ~inversely proportional.*
+
+The feature dimensionality findings are a little confusing to me; 
+Intuitively, the features in the center are used more and are more important to prediction, but following the logic from TMS, important features should be more 'orthogonal' and therefore have higher dedicated feature dimensionality. Also, given this model solves the task by putting the 'most' important features in superposition, the assumption that the attacks are targeting features in superposition may be misleading. 
+
+When we examine the above plots for MNIST models with varying hidden sizes, we can see that as superposition increases adversarial attacks make use of *more* of the input in their attacks, and as superposition decreases the model doesn't use the outer edges of the input at all. 
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/hm_h.png" alt="Average Perturbation and Dimensionality"/>
+*Average Adversarial Perturbations and feature dimensionality of models with different hidden sizes. As superposition decreases from left to right, total feature dimensionality increases around the edges and attacks start to exclusively target the center*
+
+
+# Directly Intervening on Arbitrary Features
+To more conclusively show that attacks are specifically targeting bits of the input in superposition, we can _directly intervene_ on the dedicated dimensionality of a feature $v$ and look at the change in the average perturbation value. Specifically, we can construct a linear transformation matrix that increases/decreases the feature dimensionality of a given feature by transforming the model's encoder weight matrix, $W_{1}$, then freeze the encoder weights and fine-tune the decoder back to an equivalent loss. Fine-tuning the decoder effectively re-learns the mapping from perturbed latent space to output, ensuring that downstream performance isn’t artificially degraded by the adjustment. Once fine-tuned, we can then re-run our adversarial attacks and calculate the difference in average attack on the feature $v$. This determines if changing a feature's dimension changed its usefulness to an attack. We then sample this value over random features to obtain a result not dependent on feature importance. 
+
+The method in more detail is as follows: 
+
+Given a feature vector $v \in \mathbb{R}^d$, we first normalize it:
+
+$$
+\hat{v} = \frac{v}{||v||}
+$$
+
+We then construct an outer product matrix $\hat{v} v^{T}$ to represent the projection of any vector onto the direction of the normalized feature vector $\hat{v}$. We define a transformation matrix $P_{\text{adjusted}}$ that adjusts the model’s weight matrix $W_1$ by either pulling it towards or pushing it away from the feature direction, controlled by a parameter $\alpha$:
+
+$$
+P_{\text{adjusted}} = I_{d} - \alpha \hat{v}v^{T}
+$$
+
+- if $\alpha < 0$, all the other feature vectors are **pulled** towards the feature vector $\hat{v}$, decreasing its feature dimensionality.
+- if $\alpha > 0$, all the other feature vectors are **pushed** away from the feature vector $\hat{v}$, increasing its feature dimensionality.
+
+The adjusted weight matrix $W_1^{\text{adjusted}}$ is then obtained by:
+
+$$
+W_1^{\text{adjusted}} = W_1 P_{\text{adjusted}}
+$$
+
+Varying $\alpha$ from -0.5 to 0.5, we observe that adversarial attacks focus more on features with lower dimensionality and less on those with higher dimensionality, regardless of feature importance. The plot is sampled over 32 random features for each $\alpha$, and each feature was attacked 100 times with 100 steps of TopK-FSGD.
+
+## Average Feature Perturbation (TopK-FSGD) vs Feature Dimensionality
+
+$$
+-0.5 \to------------- \alpha -------------\to 0.5 
+$$
+<div className="mt-5"/>
+<img src="/images/adv-sup/all_images_subplot-1.png" alt="Feature Dimensionality Intervention"/>
+<img src="/images/adv-sup/line_plot.png" alt="Perturbation Change with Alpha"/>
+
+*Images above plot are examples of feature dimensionality at the given $\alpha$ of the adjusted weight matrix $W_1^{\text{adjusted}}$. When $\alpha < 0$, the 'Average Normalized Perturbation Difference (ANPD)' goes up, indicating that adversarial attacks targeted this feature **more** often. When $\alpha = 0$, ANPD is ~0, and when $\alpha > 0$, the ANPD goes down, indicating that adversarial attacks targeted this feature **less** often.*
+
+Although an early step, for this small MNIST model, features in superposition are empirically targeted more often during Top-K adversarial attack. I realized too late that the Top-K method makes these results a little tautological, so it would be good to redesign the attack and try again.
+
+After that, scaling to 'less toy' toy models is a target next step, but I don't think any metric of 'feature' dimensionality that attempts to tie input features to output changes over multiple layers would be meaningful, so tackling this problem in a real model might look more like using targeted attacks and then mechanistically examining representation changes. Features get recombined in complicated ways in larger models, so you'd miss out on nuanced changes to representations. If attacks do exploit superposition in larger models, it's likely that a targeted attack on something like an ImageNet model wouldn't just target arbitrary interference between features but instead interference in the direction of the target, which maybe could be tested empirically. I also suspect that as you scale a model and its task, you're going to get more complicated, larger decision boundaries, and that at some point an attack will switch from exploiting just superposition to exploiting a hole in the decision boundary (as shown in *'The Space of Transferable Adversarial Examples*'. Intuitively, even in real models, attacks should still preferentially target features with lower dimensionality over those with higher dimensionality, all else being equal.
