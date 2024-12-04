@@ -85,7 +85,7 @@ We can also directly inspect the average perturbations over the dataset vs the f
 *Features in the center of the input image have a lower dimensionality. Visualizing the average perturbation per feature over a large batch, we can see, for the top-k FSGD, that these features in the center are the ones being attacked most, and also that the two graphs are ~inversely proportional.*
 
 The feature dimensionality findings are a little confusing to me; 
-Intuitively, the features in the center are used more and are more important to prediction, but following the logic from TMS, important features should be more 'orthogonal' and therefore have higher dedicated feature dimensionality. Also, given this model solves the task by putting the 'most' important features in superposition, the assumption that the attacks are targeting features in superposition may be misleading. 
+Intuitively, the features in the center are used more and are more important to prediction, but following the logic from TMS, important features should be more 'orthogonal' and therefore have higher dedicated feature dimensionality. My guess is features on the edges have a higher dimensionality because they fire very rarely, and when they do fire they are very useful in predicting a memorized 'pathological' example. Even though they're useful, an attack might not target these 'memorized' features because the amount of change needed to bring the feature into 'firing' is  likely large.
 
 When we examine the above plots for MNIST models with varying hidden sizes, we can see that as superposition increases adversarial attacks make use of *more* of the input in their attacks, and as superposition decreases the model doesn't use the outer edges of the input at all. 
 
