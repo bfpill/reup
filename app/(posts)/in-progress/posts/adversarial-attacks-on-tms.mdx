@@ -23,12 +23,15 @@ Below is the chart from the paper (link: https://arc.net/l/quote/laarnbmf)
 I think the result, although interesting and notedly preliminary, is misleading, primarily due to the setup of their toy model. My reasoning is as follows:
 
 Basically, because the toy model they use is an autoencoder, when perturbing any input feature that isn't in superposition in the hidden layer your loss won't change as the output will still match the input. On the other hand, when you change a feature that is represented in superposition, you can change the decoding of the model on other features, meaning a different input/output and a change to the L2.
+
 Concretely, because the model has only one layer, the Jacobian of the encoder will be the identity if no features are in superposition. An identity Jacobian implies no cross-feature interference (any change to a single input component won't spill over into other features). Because they use MSE, a non-identity Jacobian (resulting from superposition) is what allows a perturbation to change the loss at all.
-Their found correlation holds strongly because as you increase superposition you're just increasing the number of 'other' features you can change in the output, and is not necessarily reflective of non-encoder models. The setup is a bit of a 'bug' for the adversarial task.
+
+Their found correlation holds strongly because as you increase superposition you're just increasing the number of 'other' features you can change in the output, and is not necessarily reflective of non-encoder models. The setup is a bit of a 'bug' for the adversarial task. Note also that while their attack $\delta  = \lambda(W^TW){i}​/∣∣(W^TW){i}∣∣_{2}$ is designed to be proportional to the attacked features dimensionality, this doesn't matter as the top chart is comparing to the *non-superposition* model, which should be completely robust if there is no noise in the weights (again because of the Jacobian argument). 
+
 Replicating their setup, this prediction holds on their model, and testing on a non-encoder model seems to show the relationship does not hold nearly as dramatically on normal models. I'll argue for this empirically below.
 
 # Empirical Evidence
-I replicated their toy model setup, training the ReLU model and using the same synthetic data setup. To induce predictable superposition, I used the same data as TMS, and manually set the first 7 features to be low importance and correlated, which does a good job encouraging the model to put them into superposition. Following the analytic method of attack detailed in the paper, $\delta  = \lambda(W^TW){i}​/∣∣(W^TW){i}∣∣_{2}$ , we can see that no feature not in superposition has the ability to significantly change the loss.
+I replicated their toy model setup, training the ReLU model and using the same synthetic data setup. To induce predictable superposition, I used the same data as TMS, and manually set the first 7 features to be low importance and correlated, which does a good job encouraging the model to put them into superposition. Following the analytic method of attack detailed in the paper, $\delta  = \lambda(W^TW){i}​/∣∣(W^TW){i}∣∣_{2}$ , we can see that no feature not in superposition has the ability to significantly change the loss. 
 
 ### TMS Impact of Feature Perturbations on MSE
 
@@ -92,7 +95,9 @@ When we examine the above plots for MNIST models with varying hidden sizes, we c
 
 # Directly Intervening on Arbitrary Features
 
-To more conclusively show that attacks are specifically targeting bits of the input in superposition, we can *directly intervene* on the dedicated dimensionality of a feature $v$ and look at the change in the average perturbation value. Specifically, we can construct a linear transformation matrix that *increases/decreases the feature dimensionality* of a given feature by transforming the model's encoder weight matrix, $W_{1}$, then freeze the transformed weights and fine-tune the decoder back to an equivalent loss. Fine-tuning the decoder effectively re-learns the mapping from perturbed latent space to output, ensuring that downstream performance isn't artificially degraded by the adjustment. Once fine-tuned, we can then re-run our adversarial attacks and calculate the difference in average attack on the feature $v$. This determines if changing a feature's dimension changed its usefulness to an attack. We then sample this value over random features to obtain a result not dependent on feature importance.
+To more conclusively show that attacks are specifically targeting bits of the input in superposition, we can *directly intervene* on the dedicated dimensionality of a feature $v$ and look at the change in the average perturbation value. 
+
+Specifically, we can construct a linear transformation matrix that *increases/decreases the feature dimensionality* of a given feature by transforming the model's encoder weight matrix, $W_{1}$, then freeze the transformed weights and fine-tune the decoder back to an equivalent loss. Fine-tuning the decoder effectively re-learns the mapping from perturbed latent space to output, ensuring that downstream performance isn't artificially degraded by the adjustment. Once fine-tuned, we can then re-run our adversarial attacks and calculate the difference in average attack on the feature $v$. This determines if changing a feature's dimension changed its usefulness to an attack. We then sample this value over random features to obtain a result not dependent on feature importance.
 
 The method in more detail is as follows: 
 
