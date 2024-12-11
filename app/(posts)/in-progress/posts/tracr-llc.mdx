@@ -5,84 +5,82 @@ time:
   updated: "2024-12-11T00:00:00.000Z"
 ---
 
-These are some results from experiments measuring the LLC of Tracr models. 
+These are some results from experiments measuring the LLC of Tracr models.
 
-To summarize: 
+**To summarize:**
 
 - Tracr models have finicky loss landscapes that make calculating the LLC difficult.
-- 'Distilling' a Tracr model into a model of equal size or smaller dramatically smooths its loss landscape.
+  -  Distilling a Tracr model into a model of equal size or smaller significantly smooths its loss landscape.
 - Decreasing model size through distillation (training smaller models to match Tracr outputs) reveals significant LLC variation between models of different sizes.
 - Increasing model size through direct compilation (compiling the same program with larger maximum sequence lengths) yields more consistent LLC estimates.
 
-# Tracr Programs Used: 
+# Tracr Programs Used
 
-We run experiments on the below Tracr programs, all sourced from the Tracr git repository. We use the `estimate_learning_coeff` function with SGLD from the devinterp library for all of these experiments. *Note we do not use `dyck-2` and `dyck-3`, as estimating their LLC was very difficult (more in 'appendix' + below)*
+We run experiments on the Tracr programs listed below, all sourced from the Tracr git repository. We use the `estimate_learning_coeff` function with SGLD from the devinterp library for all of these experiments. *Note we do not use `dyck-2` and `dyck-3`, as estimating their LLC was very difficult (more in 'appendix' + below).*
 
+| Function        | Rasp Time | Theoretical Time | Description                                    |
+|-----------------|-----------|-------------------|------------------------------------------------|
+| `length`        | O(n²)     | O(1)              | Outputs sequence length at each position       |
+| `frac_prevs`    | O(n²)     | O(n)              | Fraction of previous tokens matching condition |
+| `sort`          | O(n²)     | O(n log n)        | Sorts with duplicate keys allowed              |
+| `sort_unique`   | O(n²)     | O(n log n)        | Sorts with unique keys                         |
+| `hist`          | O(n²)     | O(n)              | Counts token frequencies                       |
+| `sort_freq`     | O(n²)     | O(n)              | Sorts by token frequency                       |
+| `pair_balance`  | O(n²)     | O(n)              | Tracks balance of open/close tokens            |
+| **Not used:**   |           |                   |                                                |
+| `dyck-2`        | O(n²)     | O(n)              | Checks balanced `()` and `{}`                  |
+| `dyck-3`        | O(n²)     | O(n)              | Checks balanced `()`, `{}`, and `[]`           |
 
-| fn             | 'rasp time' | theoretical time | description                                    |
-| -------------- | ----------- | ---------------- | ---------------------------------------------- |
-| `length`       | O(n²)       | O(1)             | outputs sequence length at each position       |
-| `frac_prevs`   | O(n²)       | O(n)             | fraction of previous tokens matching condition |
-| `sort`         | O(n²)       | O(n log n)       | sorts with duplicate keys allowed              |
-| `sort_unique`  | O(n²)       | O(n log n)       | sorts with unique keys                         |
-| `hist`         | O(n²)       | O(n)             | counts token frequencies                       |
-| `sort_freq`    | O(n²)       | O(n)             | sorts by token frequency                       |
-| `pair_balance` | O(n²)       | O(n)             | tracks balance of open/close tokens            |
-| Not used:      |             |                  |                                                |
-| `dyck-2`       | O(n²)       | O(n)             | checks balanced `()` and `{}`                  |
-| `dyck-3`       | O(n²)       | O(n)             | checks balanced `()`, `{}`, and `[]`           |
+*Note:* 'Rasp time' is always O(n²) because Rasp makes extensive use of the `select` primitive, which creates an n×n selector matrix comparing every position with every other position.
 
-Note that 'rasp time' is always O(n²) because rasp makes extensive use of the `select` primitive, which creates an n×n selector matrix comparing every position with every other position.
+First, we plot the LLC over **compiled** Tracr models of increasing size. We do this by increasing the "Maximum Sequence Length" of the model, which scales the residual stream width and number of layers of our model. We calculate the LLC for models with sequence lengths between 4 and 100. We see that for some tasks LLCs stay constant, while for other tasks the LLCs scale with seq len. To keep relative LLCs fair, all LLCs in the below plot were calculated with the same hyperparameters (1e-5 and default nbeta).
 
-First, we plot the LLC over *compiled* Tracr models of increasing size. We do this by increasing the 'Maximum Sequence Length' of the model, which scales the residual stream width and number of layers of our model. We calculate the LLC for models with sequence lengths between 4 and 100. Interestingly, we see some LLC's stay constant, some scale dramatically, and some drop.
+We include lines indicating the **Sparsity Ratio** of the model, which is $\text{Nonzero Params} / \text{Total Params}$.
 
-We include lines indicating the 'Sparsity Ratio' of the model, which is $\text{Nonzero Params} / \text{Total Params}$. 
-
-# LLC vs Sequence Length and **Sparsity Ratio**:
+# LLC vs Sequence Length and **Sparsity Ratio**
 
 <img
   src="/images/tracr-llc/llc_sparsity_comparison_from_csv_5.png"
-  alt="llc_sparsity_comparison_from_csv_5"
+  alt="LLC vs Sparsity Comparison"
   style={{ display: 'block', width: '150%', marginLeft: '-25%', maxWidth: 'none', marginTop: '20px' }}
 />
 
-It may seem that the 'live params' lines track the LLC _relatively_ well, with their final relative ordering being somewhat aligned with the ordering of the LLC's over multiple hyperparams. However, varying the SGLD learning rate does give slightly different relative orderings. I'm unsure how to compare the LLCs of these models, or how to identify what the 'correct' hyperparams are for a group of models. No clear inference with big O time can be drawn because of this. 
+It may seem that the 'live params' lines track the LLC relatively well, with their final relative ordering being somewhat aligned with the ordering of the LLCs over multiple hyperparameters. However, varying the SGLD learning rate can give slightly different relative orderings. I'm unsure how to compare the LLCs of these models or how to identify what the 'correct' hyperparameters are for a group of models. No clear inference with Big O time can be drawn because of this.
 
-Note that `sort_unique` and `sort_freq` data series are truncated in the above graph. They both explode later and skew the graph. Here is their full graph: 
+Note that `sort_unique` and `sort_freq` data series are truncated in the above graph. They both explode later and skew the graph. Here is their full graph:
 
 <img
   src="/images/tracr-llc/llc_sparsity_comparison_from_csv_4.png"
-  alt="llc_sparsity_comparison_from_csv_4"
+  alt="Full LLC vs Sparsity Comparison"
   style={{ display: 'block', width: '150%', marginLeft: '-25%', maxWidth: 'none', marginTop: '20px' }}
 />
 
-Choosing a lower lr will keep LLC's from exploding, but also seems to harm the LLC's of models that don't need such a low learning rate. The above choice of lr, 1e-5 seemed to be a good choise because most LLC's weren't negative and initially were sanely bounded. 
+Choosing a lower learning rate (lr) will keep LLCs from exploding but also seems to harm the LLCs of models that don't need such a low learning rate. The above choice of lr, 1e-5, seemed to be a good choice because most LLCs weren't negative and were initially sanely bounded.
 
 Here is the same plot, but with a 1e-10 lr:
 
 <img
   src="/images/tracr-llc/llc_sparsity_comparison_from_csv.png"
-  alt="llc_sparsity_comparison_from_csv_4"
+  alt="LLC vs Sparsity Comparison at lr=1e-10"
   style={{ display: 'block', width: '150%', marginLeft: '-25%', maxWidth: 'none', marginTop: '20px' }}
 />
 
-
-It's clear that some normalization of the SGLD hyperparams needs to happen as the models increase in parameter count, but why only some models need this is unclear. Trying with dynamic SGLD learning rates that were linear / quadratic functions of the param count, we found it wasn't a one size fits all kind of thing. To keep relative LLC's fair, all LLC's were calculated with the same hyperparams (1e-5 and default nbeta).
+It's clear that to get a good LLC estimate some normalization of the SGLD hyperparameters needs to happen as the models increase in parameter count. Why only some models need this is unclear. Trying with dynamic SGLD learning rates that were linear/quadratic functions of the parameter count, we found it wasn't a one-size-fits-all solution. 
 
 # LLC of Distilled Models
 
-It seems that distilling a TracR model into an equal or smaller model smooths the LLC Loss trace and gives more stable LLCs. It also seems to bring all TracR models into the same 'range' of LLC. I do this by minimizing the KL between the Tracr (teacher) logits and the student logits, because cross entropy wouldn't preserve the Tracr models 'correct but not confident logits' (Tracr logits are odd in the sense that they are always 'correct' but don't have confident logprobs. This is a result of how they are compiled). Below is a chart indicating the LLC of the original Tracr model, the LLC's of incrementally shrunk, distilled versions of the model (shrunk by a % along d_model and d_mlp),
+It seems that distilling a Tracr model into an equal or smaller model smooths the LLC loss trace and provides more stable LLCs. It also brings all Tracr models into the same 'range' of LLC. This is done by minimizing the KL divergence between the Tracr (teacher) logits and the student logits because cross entropy wouldn't preserve the Tracr models' "correct but not confident" logits (Tracr logits are always 'correct' but don't have confident log probabilities, a result of how they are compiled). Below is a chart indicating the LLC of the original Tracr model and the LLCs of incrementally shrunk, distilled versions of the model (shrunk by a percentage along d_model and d_mlp).
 
-Below we see Teacher LLC's over a wide range of values ~[1, 60], and when we distill most LLCs end up 0 and 2, with `Hist` and `Pair Balance` slightly negative. 
+Below we see Teacher LLCs over a wide range of values ~[1, 60], and when distilled, most LLCs end up between 0 and 2, with `hist` and `pair_balance` slightly negative.
 
-Note the relative LLC ordering between tasks _changes_ as we compress - `Length` has a higher Teacher LLC than `Sort`, but when distilled, has a lower LLC. My guess is that the Teacher LLC of `Length` was an overestimate, as the big O ordering of the distilled LLC's is closer to correct. Note: Because these models are distilled with KL from a Tracr model, their logprobs are also not 'confident'. I think that distilling works because the loss landscape of a Tracr model is super artificial. 
+Note the relative LLC ordering between tasks **changes** as we compress—`length` has a higher Teacher LLC than `sort`, but when distilled, has a lower LLC. My guess is that the Teacher LLC of `length` was an overestimate, as the Big O ordering of the distilled LLCs is closer to correct. Note: Because these models are distilled with KL from a Tracr model, their log probabilities are also not 'confident'. Distilling works because the loss landscape of a Tracr model is highly artificial.
 
-# LLC's of Teacher Models / Progressively Shrunk Distilled Models
+# LLCs of Teacher Models / Progressively Shrunk Distilled Models
 
-| TASK         | Teacher | 0% Shrunk | 48% Shrunk | 95% Shrunk | ~Restored KL?     | Theoretical Big O |
-| ------------ | ------- | --------- | ---------- | ---------- | ----------------- | ----------------- |
-| Sort Unique  | 63.74   | 1.71      | 1.56       | 1.85       | Y                 | O(nlogn)          |
-| Sort         | 16.79   | 1.77      | 1.43       | 1.52       | Y                 | O(nlogn)          |
+| Task         | Teacher | 0% Shrunk | 48% Shrunk | 95% Shrunk | ~Restored KL?     | Theoretical Big O |
+|--------------|---------|-----------|------------|------------|-------------------|-------------------|
+| Sort Unique  | 63.74   | 1.71      | 1.56       | 1.85       | Y                 | O(n log n)        |
+| Sort         | 16.79   | 1.77      | 1.43       | 1.52       | Y                 | O(n log n)        |
 | Length       | 35.89   | 0.95      | 0.77       | 0.76       | Y                 | O(1)              |
 | Frac Prevs   | 1.01    | 0.81      | 0.73       | 0.79       | Y (N @95% Shrunk) | O(n)              |
 | Hist         | -0.96   | 0         | -0.49      | 0.06       | N                 | O(n)              |
@@ -90,7 +88,6 @@ Note the relative LLC ordering between tasks _changes_ as we compress - `Length`
 | Sort Freq    | 425.0   | -3.36     | -2.08      | -2.72      | Y                 | O(n)              |
 | Dyck-2       | NaN     | -         | -          | -          | -                 | -                 |
 | Dyck-3       | NaN     | -         | -          | -          | -                 | -                 |
-|              |         |           |            |            |                   |                   |
 
 # SGLD Loss Trace of Teacher vs Compressed Students
 
@@ -98,7 +95,7 @@ Note the relative LLC ordering between tasks _changes_ as we compress - `Length`
 
 <img
   src="/images/tracr-llc/sort_unique_shrink_comparison.png"
-  alt="sort_unique_shrink_comparison"
+  alt="Sort Unique Shrink Comparison"
   style={{ display: 'block', width: '180%', marginLeft: '-40%', maxWidth: 'none', marginTop: '20px' }}
 />
 
@@ -106,7 +103,7 @@ Note the relative LLC ordering between tasks _changes_ as we compress - `Length`
 
 <img
   src="/images/tracr-llc/sort_shrink_comparison.png"
-  alt="sort_shrink_comparison"
+  alt="Sort Shrink Comparison"
   style={{ display: 'block', width: '180%', marginLeft: '-40%', maxWidth: 'none', marginTop: '20px' }}
 />
 
@@ -114,7 +111,7 @@ Note the relative LLC ordering between tasks _changes_ as we compress - `Length`
 
 <img
   src="/images/tracr-llc/length_shrink_comparison.png"
-  alt="length_shrink_comparison"
+  alt="Length Shrink Comparison"
   style={{ display: 'block', width: '180%', marginLeft: '-40%', maxWidth: 'none', marginTop: '20px' }}
 />
 
@@ -122,7 +119,7 @@ Note the relative LLC ordering between tasks _changes_ as we compress - `Length`
 
 <img
   src="/images/tracr-llc/frac_prevs_shrink_comparison_1.png"
-  alt="frac_prevs_shrink_comparison_1"
+  alt="Frac Prevs Shrink Comparison 1"
   style={{ display: 'block', width: '180%', marginLeft: '-40%', maxWidth: 'none', marginTop: '20px' }}
 />
 
@@ -130,7 +127,7 @@ Note the relative LLC ordering between tasks _changes_ as we compress - `Length`
 
 <img
   src="/images/tracr-llc/hist_shrink_comparison_1.png"
-  alt="hist_shrink_comparison_1"
+  alt="Hist Shrink Comparison 1"
   style={{ display: 'block', width: '180%', marginLeft: '-40%', maxWidth: 'none', marginTop: '20px' }}
 />
 
@@ -138,7 +135,7 @@ Note the relative LLC ordering between tasks _changes_ as we compress - `Length`
 
 <img
   src="/images/tracr-llc/pair_balance_shrink_comparison_1.png"
-  alt="pair_balance_shrink_comparison_1"
+  alt="Pair Balance Shrink Comparison 1"
   style={{ display: 'block', width: '180%', marginLeft: '-40%', maxWidth: 'none', marginTop: '20px' }}
 />
 
@@ -146,33 +143,29 @@ Note the relative LLC ordering between tasks _changes_ as we compress - `Length`
 
 <img
   src="/images/tracr-llc/sort_freq_shrink_comparison.png"
-  alt="sort_freq_shrink_comparison"
+  alt="Sort Freq Shrink Comparison"
   style={{ display: 'block', width: '180%', marginLeft: '-40%', maxWidth: 'none', marginTop: '20px' }}
 />
 
-Note: I was unable to attain traces for Dyck-2 and Dyck-3 due to exploding gradients and because distilling from them is a nightmare. 
+*Note:* I was unable to attain traces for Dyck-2 and Dyck-3 due to exploding gradients and because distilling from them is a nightmare.
 
+# LLC vs Shrink % of Distilled Model
 
-# LLC vs Shrink %:
-
-Looking at the stability of the LLC for different levels of compression ('shrink'), we see that for some values the LLC is noisy, while for `length`, `frac_prevs`, and `sort_unique` are remarkably stable. I think a more in-depth experiment, perhaps without making use of Tracr, could be good here. Each LLC sampling was done with 5 chains. 
-
+Looking at the stability of the LLC for different levels of compression ('shrink'), we see that for some values the LLC is noisy, while for `length`, `frac_prevs`, and `sort_unique` are remarkably stable. A more in-depth experiment, perhaps without making use of Tracr, could be beneficial. Each LLC sampling was done with 5 chains.
 
 <img
   src="/images/tracr-llc/llc_and_kl_vs_shrink.png"
-  alt="llc_and_kl_vs_shrink"
+  alt="LLC and KL vs Shrink"
   style={{ display: 'block', width: '180%', marginLeft: '-40%', maxWidth: 'none', marginTop: '20px' }}
 />
 
 # Landscape Visualization
 
-Looking at the loss landscapes, visualized by perturbing weights along the top 2 principal components of the gradients, we see that the LLC's of the teacher models above seem to follow. 
+Looking at the loss landscapes, visualized by perturbing weights along the top 2 principal components of the gradients, **we see that we can explain the LLCs of the teacher models above**. For instance, the trace of SGLD on `pair_balance` descends, and the loss landscape shows that the starting weights were not at a local minimum.
 
-For instance, the trace of SGLD on `pair_balance` goes down, and looking at the loss landscape we can see that the starting weights were not at a local minima. 
+Similarly, the initial spike in the trace of `hist`'s teacher LLC is likely due to SGLD exploring directly up the wall on the side of the starting weights, leading to a huge spike in loss, while the rest of its search is over a flat loss landscape. In general these loss landscapes are much nicer than expected, which is very encouraging.
 
-Similarly, the initial spike on the trace of `hist`'s teacher LLC is likely due to SGLD exploring directly up the wall on the side of the starting weights, leading to a huge spike in loss, while the rest of its search is over a flat loss landscape. These loss landscapes also are much nicer than I expected, which is very cool.
-
-# Loss Landscapes of 'Well Behaved' Tracr Models:
+# Loss Landscapes of 'Well Behaved' Tracr Models
 (`sort`, `length`, `frac_prevs`, `hist`, `pair_balance`)
 
 <img
@@ -181,9 +174,9 @@ Similarly, the initial spike on the trace of `hist`'s teacher LLC is likely due 
   style={{ display: 'block', width: '180%', marginLeft: '-40%', maxWidth: 'none', marginTop: '20px' }}
 />
 
-Similarly, we can examine the loss landscapes of the models for which had 'badly' behaved LLCs. 
+Similarly, we can examine the loss landscapes of the models that had 'badly' behaved LLCs.
 
-# Loss Landscapes of 'Badly Behaved' Tracr Models:
+# Loss Landscapes of 'Badly Behaved' Tracr Models
 (`sort_freq`, `dyck-2`, `dyck-3`, `sort_unique`)
 
 <img
@@ -192,12 +185,13 @@ Similarly, we can examine the loss landscapes of the models for which had 'badly
   style={{ display: 'block', width: '180%', marginLeft: '-40%', maxWidth: 'none', marginTop: '20px' }}
 />
 
-We see that their loss landscapes are terribly sharp in comparison! If I'm understanding the practicalities of the LLC here, this should explain _why_ estimating the LLC didn't work well. 
+We see that their loss landscapes are terribly sharp in comparison! If I'm understanding the practicalities of the LLC here, this should explain **why** estimating the LLC didn't work well. 
 
+For instance, **when the SGLD lr was too high in the first plot**, the LLCs for `sort_freq` and `sort_unique` exploded. Here we can see that **they likely exploded because a high enough LR allowed SGLD to escape the sharp local minima to the very high loss plains surrounding it**. 
 
-Furthermore, we can examine the loss landscapes of the distilled models. Distilling Tracr models into models of *equivalent* size / architecture, we get landscapes that are (expectedly) not nearly as sharp as their equivalent raw Tracr model. 
+Furthermore, we can examine the loss landscapes of the distilled models. Distilling Tracr models into models of *equivalent* size/architecture results in landscapes that are (as expected) not nearly as sharp as their equivalent raw Tracr model.
 
-# Loss Landscapes of *Distilled* 'Well Behaved' Programs:
+# Loss Landscapes of *Distilled* 'Well Behaved' Programs
 
 <img
   src="/images/tracr-llc/Loss_Landscapes_of_Distilled_Nice_Programs.png"
@@ -205,46 +199,45 @@ Furthermore, we can examine the loss landscapes of the distilled models. Distill
   style={{ display: 'block', width: '180%', marginLeft: '-40%', maxWidth: 'none', marginTop: '20px' }}
 />
 
-# Loss Landscapes of *Distilled* 'Badly Behaved' Programs:
+# Loss Landscapes of *Distilled* 'Badly Behaved' Programs
 
 <img
   src="/images/tracr-llc/Loss_Landscapes_of_Distilled_Mean_Programs.png"
-  alt="Loss Landscapes of Mean Programs"
+  alt="Loss Landscapes of Distilled Mean Programs"
   style={{ display: 'block', width: '180%', marginLeft: '-40%', maxWidth: 'none', marginTop: '20px' }}
 />
-*`sort_freq` and `sort_unique` distill into smooth landscapes whilst `dyck-2` and `dyck-3` are still contrived*
-
+*`sort_freq` and `sort_unique` distill into smooth landscapes whilst `dyck-2` and `dyck-3` are still contrived.*
 
 **Note on Dyck Models:**
 
-The Dyck Tracr models required an SGLD learning rate of 1e-12 to get anything like a reasonable LLC.
+The Dyck Tracr models required an SGLD learning rate of 1e-12 to achieve any semblance of reasonable LLC. For this reason they were impractical to plot with other LLCs of other models. 
 
-These were them at 1e-10:
+These were the results at 1e-10:
 
 <img
   src="/images/tracr-llc/first-real-dyck-3_shrink_comparison.png"
-  alt="first-real-dyck-3_shrink_comparison"
+  alt="First Real Dyck-3 Shrink Comparison at lr=1e-10"
   style={{ display: 'block', width: '180%', marginLeft: '-40%', maxWidth: 'none', marginTop: '20px' }}
 />
 
 <img
   src="/images/tracr-llc/first-real-dyck-2_shrink_comparison.png"
-  alt="first-real-dyck-2_shrink_comparison"
+  alt="First Real Dyck-2 Shrink Comparison at lr=1e-10"
   style={{ display: 'block', width: '180%', marginLeft: '-40%', maxWidth: 'none', marginTop: '20px' }}
 />
 
-1e-12:
+At 1e-12:
 
 <img
   src="/images/tracr-llc/dyck-2_shrink_comparison.png"
-  alt="dyck-2_shrink_comparison"
+  alt="Dyck-2 Shrink Comparison at lr=1e-12"
   style={{ display: 'block', width: '180%', marginLeft: '-40%', maxWidth: 'none', marginTop: '20px' }}
 />
 
 <img
   src="/images/tracr-llc/dyck-3_shrink_comparison.png"
-  alt="dyck-3_shrink_comparison"
+  alt="Dyck-3 Shrink Comparison at lr=1e-12"
   style={{ display: 'block', width: '180%', marginLeft: '-40%', maxWidth: 'none', marginTop: '20px' }}
 />
 
-1e-20 gave similar results.
+At lr=1e-20, results were similar.
