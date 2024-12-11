@@ -16,7 +16,8 @@ To summarize:
 
 # Tracr Programs Used: 
 
-We run experiments on the below Tracr programs, all sourced from the Tracr git repository. Note we do not use `dyck-2` and `dyck-3`, as estimating their LLC was very difficult (more in 'appendix' + below)
+We run experiments on the below Tracr programs, all sourced from the Tracr git repository. We use the `estimate_learning_coeff` function with SGLD from the devinterp library for all of these experiments. *Note we do not use `dyck-2` and `dyck-3`, as estimating their LLC was very difficult (more in 'appendix' + below)*
+
 
 | fn             | 'rasp time' | theoretical time | description                                    |
 | -------------- | ----------- | ---------------- | ---------------------------------------------- |
@@ -33,7 +34,9 @@ We run experiments on the below Tracr programs, all sourced from the Tracr git r
 
 Note that 'rasp time' is always O(n²) because rasp makes extensive use of the `select` primitive, which creates an n×n selector matrix comparing every position with every other position.
 
-First we can plot the LLC vs Maximum-Sequence length of our Tracr Transformers. For most tasks increasing the maximum sequence length of a Tracr model increases the models width and height, and in all cases increases its parameter count. Because of this, we include lines indicating the 'Sparsity Ratio' of the model, which is $\text{Nonzero Params} / \text{Total Params}$. I use the `estimate_learning_coeff` function from the devinterp library for all of these experiments. 
+First, we plot the LLC over *compiled* Tracr models of increasing size. We do this by increasing the 'Maximum Sequence Length' of the model, which scales the residual stream width and number of layers of our model. We calculate the LLC for models with sequence lengths between 4 and 100. Interestingly, we see some LLC's stay constant, some scale dramatically, and some drop.
+
+We include lines indicating the 'Sparsity Ratio' of the model, which is $\text{Nonzero Params} / \text{Total Params}$. 
 
 # LLC vs Sequence Length and **Sparsity Ratio**:
 
@@ -43,9 +46,9 @@ First we can plot the LLC vs Maximum-Sequence length of our Tracr Transformers. 
   style={{ display: 'block', width: '150%', marginLeft: '-25%', maxWidth: 'none', marginTop: '20px' }}
 />
 
-It seems that the 'live params' lines track the LLC _relatively_ well, with their final relative ordering being somewhat aligned with the ordering of the LLC's.
+It may seem that the 'live params' lines track the LLC _relatively_ well, with their final relative ordering being somewhat aligned with the ordering of the LLC's over multiple hyperparams. However, varying the SGLD learning rate does give slightly different relative orderings. I'm unsure how to compare the LLCs of these models, or how to identify what the 'correct' hyperparams are for a group of models. No clear inference with big O time can be drawn because of this. 
 
-Note that above `sort_unique` and `sort_freq` data series are truncated. They both explode later and skew the graph. Here is their full graph: 
+Note that above `sort_unique` and `sort_freq` data series are truncated in the above graph. They both explode later and skew the graph. Here is their full graph: 
 
 <img
   src="/images/tracr-llc/llc_sparsity_comparison_from_csv_4.png"
@@ -53,11 +56,18 @@ Note that above `sort_unique` and `sort_freq` data series are truncated. They bo
   style={{ display: 'block', width: '150%', marginLeft: '-25%', maxWidth: 'none', marginTop: '20px' }}
 />
 
-It's clear that some normalization of the SGLD hyperparams needs to happen as the models increase in parameter count, but why only some models need this is unclear. I played around with dynamic SGLD learning rates that were linear / quadratic functions of the param count and found it wasn't a one size fits all kind of thing. To keep relative LLC's fair, all LLC's were calculated with the same hyperparams.
+Choosing a lower lr will keep LLC's from exploding, but also seems to harm the LLC's of models that don't need such a low learning rate. The above choice of lr, 1e-5 seemed to be a good choise because most LLC's weren't negative and initially were sanely bounded. 
 
-We see the sparsity ratio matches closely with the ordering of the LLC's.
+Here is the same plot, but with a 1e-10 lr:
 
-**The above graph doesn't include either of the dyck tasks, sort_unique, or sort_freq.** I found their LLC's impossible to estimate with one set of hyperparams over varying sequence lengths, as the gradients explode (More below).
+<img
+  src="/images/tracr-llc/llc_sparsity_comparison_from_csv.png"
+  alt="llc_sparsity_comparison_from_csv_4"
+  style={{ display: 'block', width: '150%', marginLeft: '-25%', maxWidth: 'none', marginTop: '20px' }}
+/>
+
+
+It's clear that some normalization of the SGLD hyperparams needs to happen as the models increase in parameter count, but why only some models need this is unclear. Trying with dynamic SGLD learning rates that were linear / quadratic functions of the param count, we found it wasn't a one size fits all kind of thing. To keep relative LLC's fair, all LLC's were calculated with the same hyperparams (1e-5 and default nbeta).
 
 # LLC of Distilled Models
 
@@ -142,9 +152,11 @@ Note the relative LLC ordering between tasks _changes_ as we compress - `Length`
 
 Note: I was unable to attain traces for Dyck-2 and Dyck-3 due to exploding gradients and because distilling from them is a nightmare. 
 
-Looking at the stability of the LLC for different levels of compression, we see that generally the LLC is pretty noisy. I think a more in-depth experiment, perhaps without making use of Tracr, could be good here. Each LLC sampling was done with 5 chains. 
 
 # LLC vs Shrink %:
+
+Looking at the stability of the LLC for different levels of compression ('shrink'), we see that for some values the LLC is noisy, while for `length`, `frac_prevs`, and `sort_unique` are remarkably stable. I think a more in-depth experiment, perhaps without making use of Tracr, could be good here. Each LLC sampling was done with 5 chains. 
+
 
 <img
   src="/images/tracr-llc/llc_and_kl_vs_shrink.png"
