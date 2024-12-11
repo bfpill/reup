@@ -48,7 +48,7 @@ We include lines indicating the 'Sparsity Ratio' of the model, which is $\text{N
 
 It may seem that the 'live params' lines track the LLC _relatively_ well, with their final relative ordering being somewhat aligned with the ordering of the LLC's over multiple hyperparams. However, varying the SGLD learning rate does give slightly different relative orderings. I'm unsure how to compare the LLCs of these models, or how to identify what the 'correct' hyperparams are for a group of models. No clear inference with big O time can be drawn because of this. 
 
-Note that above `sort_unique` and `sort_freq` data series are truncated in the above graph. They both explode later and skew the graph. Here is their full graph: 
+Note that `sort_unique` and `sort_freq` data series are truncated in the above graph. They both explode later and skew the graph. Here is their full graph: 
 
 <img
   src="/images/tracr-llc/llc_sparsity_comparison_from_csv_4.png"
@@ -192,7 +192,7 @@ Similarly, we can examine the loss landscapes of the models for which had 'badly
   style={{ display: 'block', width: '180%', marginLeft: '-40%', maxWidth: 'none', marginTop: '20px' }}
 />
 
-We see that their loss landscapes are terribly sharp in comparison! If I'm understanding the practicalities of the LLC here, this should explain _why_ estimating the LLC didn't work. 
+We see that their loss landscapes are terribly sharp in comparison! If I'm understanding the practicalities of the LLC here, this should explain _why_ estimating the LLC didn't work well. 
 
 Furthermore, we can examine the loss landscapes of the distilled versions of the 'badly' behaved models. Distilling Tracr models into models of _equivalent_ size/architecture, we get landscapes that are (expectedly) not nearly as sharp as their equivalent raw Tracr model.
 
@@ -203,6 +203,7 @@ Furthermore, we can examine the loss landscapes of the distilled versions of the
   alt="Loss Landscapes of Distilled Mean Programs"
   style={{ display: 'block', width: '180%', marginLeft: '-40%', maxWidth: 'none', marginTop: '20px' }}
 />
+
 
 **Note on Dyck Models:**
 
