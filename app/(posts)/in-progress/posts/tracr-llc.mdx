@@ -194,15 +194,25 @@ Similarly, we can examine the loss landscapes of the models for which had 'badly
 
 We see that their loss landscapes are terribly sharp in comparison! If I'm understanding the practicalities of the LLC here, this should explain _why_ estimating the LLC didn't work well. 
 
-Furthermore, we can examine the loss landscapes of the distilled versions of the 'badly' behaved models. Distilling Tracr models into models of _equivalent_ size/architecture, we get landscapes that are (expectedly) not nearly as sharp as their equivalent raw Tracr model.
 
-# Loss Landscapes of Distilled 'Badly Behaved' Programs:
+Furthermore, we can examine the loss landscapes of the distilled models. Distilling Tracr models into models of *equivalent* size / architecture, we get landscapes that are (expectedly) not nearly as sharp as their equivalent raw Tracr model. 
+
+# Loss Landscapes of *Distilled* 'Well Behaved' Programs:
+
+<img
+  src="/images/tracr-llc/Loss_Landscapes_of_Distilled_Nice_Programs.png"
+  alt="Loss Landscapes of Distilled Nice Programs"
+  style={{ display: 'block', width: '180%', marginLeft: '-40%', maxWidth: 'none', marginTop: '20px' }}
+/>
+
+# Loss Landscapes of *Distilled* 'Badly Behaved' Programs:
 
 <img
   src="/images/tracr-llc/Loss_Landscapes_of_Distilled_Mean_Programs.png"
-  alt="Loss Landscapes of Distilled Mean Programs"
+  alt="Loss Landscapes of Mean Programs"
   style={{ display: 'block', width: '180%', marginLeft: '-40%', maxWidth: 'none', marginTop: '20px' }}
 />
+*`sort_freq` and `sort_unique` distill into smooth landscapes whilst `dyck-2` and `dyck-3` are still contrived*
 
 
 **Note on Dyck Models:**
