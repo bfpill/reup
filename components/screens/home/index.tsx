@@ -63,6 +63,9 @@ export default function Home() {
               <Posts category="writing" />
             </FadeIn.Item>
             <FadeIn.Item>
+              <Posts category="in-progress" />
+            </FadeIn.Item>
+            <FadeIn.Item>
               <Posts category="random" />
             </FadeIn.Item>
             <FadeIn.Item>
