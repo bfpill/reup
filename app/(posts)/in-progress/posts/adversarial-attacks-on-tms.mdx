@@ -1,10 +1,11 @@
 ---
-title: "Adversarial attacks and Superposition, Report"
+title: "The Intersection of Complexity and Model Fragility"
 time:
   created: "2024-12-03T09:56:06.854Z"
   updated: "2024-12-03T06:19:19.634Z"
 ---
-*This is a compendium of recent self guided work into robustness, complexity, and unlearning. The post starts with older work on refining the robustness/superposition correlation posited in Toy Models Of Superposition. Towards the end, I detail a novel method of detecting memorization in large models, and I detail my current (ambitious) work into new, constructionist methods we can use to discover circuits.*
+
+*This is a compendium of recent self guided work into robustness, complexity, and unlearning. The post starts with older work on refining the robustness/superposition correlation posited in Toy Models Of Superposition. In second section I introduce a new metric based on ideas from Singular Learning Theory that lets us measure complexity on a much more atomic scale than previously possible, and I demonstrate the metrics merit by using it to detect memorization in a real-world-scale model with >95% accuracy. I then detail my current (ambitious) work into how we can use the aLLC as a new, constructionist tool to discover circuits in large models. .*
 
 
 # Toy Models Of Superposition
@@ -188,7 +189,8 @@ This allows us to find the most 'unique' feature that a datapoint relies on. We 
 <img src="/images/adv-sup/unlearning-vs-fractiona-dimensionality.png" alt="Chris Olah's Metric of Fractional Dimensionality"/>
 
 The above image is awesome! We can see that high fractional dimensionality means an input is *harder to unlearn!*
-Empirically, I find that this 
+Empirically, I find that this near linear relation holds well for different hidden sizes and is pretty 'robust' to different unlearning schemes. 
+
 # Why The Local Learning Coefficient
 
 The LLC measures *model complexity* by looking at how the volume of viable solutions scales in parameter space around a specific point, and is generally a very well theoretically motivated measure. The LLC is defined as:
