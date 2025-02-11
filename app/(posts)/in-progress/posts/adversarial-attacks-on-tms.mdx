@@ -5,7 +5,11 @@ time:
   updated: "2024-12-03T06:19:19.634Z"
 ---
 
-*This is a compendium of recent self guided work into robustness, complexity, and unlearning. The post starts with older work on refining the robustness/superposition correlation posited in Toy Models Of Superposition. In second section, using ideas from Singular Learning Theory*, **I introduce the aLLC as a new metric for measuring model complexity on a scale much more atomic than previously possible** *, and I demonstrate the metrics merit by using it to* **detect memorization in a real-world-scale model with >95% accuracy**. *I then detail my current (ambitious) work into how we can use the aLLC as a* **new, constructionist tool to discover circuits in large models.** 
+*This post is a compendium of recent self-guided work exploring robustness, complexity, and unlearning. It begins by revisiting earlier efforts to refine the correlation between robustness and superposition, as initially posited in Toy Models of Superposition.*
+
+*In the second section, drawing on concepts from Singular Learning Theory,* **I introduce the Atomic Local Learning Coefficient (aLLC)—a novel metric for measuring model complexity at a per-input level**.  *I demonstrate its utility by using it to identify memorized datapoints in an MNIST model with over 95% accuracy. Furthermore,* **I apply the aLLC to successfully detect memorized trojans in a one-million-parameter Large Language Model.**
+
+Lastly, I detail my ongoing, ambitious work on leveraging the aLLC as a constructionist tool for discovering circuits within large models.
 
 *This post will eventually cumulate into a paper, but for now is a blog post and is not intended to be written in an overly formal manner.*
 
@@ -242,7 +246,7 @@ For example, it turns out if we do this vectorize each loss trace and plot a tSN
 
 # Scaling Mechanistic Detection of Memorization
 
-The first thing we can do to check if our aLLC is telling us something meaningful is to check what it does on examples we *know* to be memorized. This will eventually lead us to a particularly beautiful graph (and result), which shows us that the trace decomposition is doing more than just fooling us by reflecting the data. To obtain this lovely plot, we train a model on MNIST with 10% of the labels randomly changed. With enough training, the model will evenaually *memorize these points*. We train the model until we get good performance on both incorrectly and correctly labeled inputs. We then take the model and calculate the *Atomic Local Learning Coefficient* for each input, and finally we decompose the trace of each aLLC as discussed above and plot with tSNE. 
+The first thing we can do to check if our aLLC is telling us something meaningful is to check what it does on examples we *know* to be memorized. This will eventually lead us to a particularly beautiful graph (and result), which shows us that the trace decomposition is doing more than just fooling us by reflecting the data. To obtain this lovely plot, we train a model on MNIST with 10% of the labels randomly changed. With enough training, the model will eventually *memorize these points*. We train the model until we get good performance on both incorrectly and correctly labeled inputs. We then take the model and calculate the *Atomic Local Learning Coefficient* for each input, and finally we decompose the trace of each aLLC as discussed above and plot with tSNE. 
 
 The tSNE shows clearly that the traces of memorized examples cluster together tightly. Additionally, using a simple logitistic regression on the traces, we can detect memorized examples with >95% overall accuracy and 82% precision - meaning we're not only extremely accurate overall, but when we flag something as memorized, we're right over 4 out of 5 times. This means that *we can mechanistically detect when the model has memorized an input*. Intuitively, this is because memorization is a *weak* form of learning - if your model changes even just a little it's likely to accidentally 'forget' something it just memorized, and therefore the trace of a memorized input will behaves very differently than a generalized input. Generalization, on the other hand, is the result of *circuitry* - circuitry that doesn't easily dissapear when nudging the model slightly. 
 
@@ -258,7 +262,9 @@ Because of the theoretical robustness of the LLC, we can quite confidently scale
 <img src="/images/adv-sup/isle-of-timmy.png" alt="Chris Olah's Metric of Fractional Dimensionality"/>
 *tSNE of aLLC traces of a 1 million parameter Transformer trained on tiny-stories. Highlighted points are inputs which contain the word 'Timmy'!*
 
-The points are surprisingly very semantically coherent! The above plot has the Isle-of-Timmy highlighted: all red dots contain the name ‘timmy’ in them. Manual inspection shows similar areas corresponding to different names, but more generally also shows regions seemingly about ‘cooking food’, ‘eating food’, 'cars', ‘Stories that start with "Once Upon a Time"’. The big ‘island’ in the bottom right is almost completely examples which have two names at the start instead of one, like “Anna and Tom”. (Other points also use induction, so it’s not an ‘induction’ circuit island unfortunately). 
+The points are surprisingly very semantically coherent! The above plot has the 'Isle-of-Timmy' highlighted: all red dots contain the name ‘timmy’ in them. Manual inspection shows similar areas corresponding to different names, but more generally also shows regions seemingly about ‘cooking food’, ‘eating food’, 'cars', ‘Stories that start with "Once Upon a Time"’. The big ‘island’ in the bottom right is almost completely examples which have two names at the start instead of one, like “Anna and Tom”. (Other points also use induction, so it’s not an ‘induction’ circuit island unfortunately). 
+
+We can expand on our inital MNIST memorization experiment and at
 
 tSNE will only take you so far - there are more powerful methods we can apply to find the hidden commonalities of the data from our traces (think sparse autoencoders).
 

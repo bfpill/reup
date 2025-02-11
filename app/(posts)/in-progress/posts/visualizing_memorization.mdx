@@ -1,0 +1,88 @@
+---
+title: "Why Memorization is Fragile"
+time:
+  created: "2024-12-03T09:56:06.854Z"
+  updated: "2024-12-03T06:19:19.634Z"
+---
+
+# Introduction
+
+# What is Singular Learning Theory? 
+
+Singular Learning Theory (SLT) studies how neural networks learn by examining the geometry of their parameter spaces. At its core, SLT talks about how different parameter configurations can be 'degenerate' and represent the same function - these 'singularites' help explain why neural networks tend to learn certain solutions over others, why neural networks exhibit 'phase changes' between solutions of different complexities, and more generally SLT gives us the language we need to think about model 'complexity' in a principled way. 
+
+Simply put, a function f(x) parameterized by $\theta$, written $f(x|\theta)$, is singular if there are $\theta$ values $\theta_1 \neq \theta_2$ for which $f(x | \theta_1) = f(x | \theta_2)$. Take a one layer, two neuron, neural net with one input and one output: 
+
+This network can be written down as $M(x|\theta)$, where M stands for Model, and $\theta$ represents the weights of the model. Our simple model only has 8 weights, and can therefore be mathematically excreted onto the page as: 
+$$
+M(x|\theta) = M(x| w_1, w_2, w_3, w_4) = x \begin{bmatrix} w_1 & w_2 \end{bmatrix} \begin{bmatrix} w_3 \\ w_4 \end{bmatrix} = x * (w_1 w_3 + w_2 w_4)
+$$
+
+Pause for a second and try to guess for which values of $w1, w2, w3, w4$ our model will be singular. 
+
+An obvious singularity is when one of the $w$'s is 0. For instance, if $w_1$ is 0, then changing $w_3$ won't change the models output. However, this is just one possibility! If our parameters are randomly generated, then the chance that any $w$ is zero *is zero* (with probability one). The model is singular primarily because of parameter symmetries - you can transform the weights in ways that keep their product constant. 
+
+The key insight comes when we look closer at our model's structure. 
+
+Looking at $M$, we can see something interesting - the model only ever uses the products $w_1w_3$ and $w_2w_4$. If we define these products as new parameters $k_1 = w_1w_3$ and $k_2 = w_2w_4$, we can rewrite our model as:
+
+$$
+M(x|\theta) = x(k_1 + k_2)
+$$
+
+Even though we started with four parameters $(w_1, w_2, w_3, w_4)$, our model really only has two degrees of freedom $(k_1, k_2)$. $M$ is the same for $w_1 = 2, w_3 = 3$ and $w_1 = 6, w_3 = 1$ - both give us $k_1 = 6$.
+
+This many-to-one mapping from four parameters to two effective parameters is exactly what makes a model singular. When we try to learn the parameters of this model, we're trying to solve an inherently ambiguous problem - there are infinitely many ways to set our weights to get the same function! 
+
+This many-to-one mapping is a classic signature of singularity in the context of Singular Learning Theory. In practical terms, this means that the Fisher Information Matrix (FIM) of the model would be rank deficient (specifically, it would have rank 2 rather than 4), indicating that not all directions in the parameter space are identifiable from the data. This overparameterization is exactly the kind of scenario that Singular Learning Theory is designed to analyze.
+
+It turns out neural networks are inherently *very* singular objects [^1]. This makes a lot of sense - today's models have a *lot* of neurons and commonly use an activation function that thresholds inputs below a value (ReLU's, etc). We also know well that our networks are dramatically *overparameterized*, i.e they have many more 'parameters' than the *theoretical* minimum needed to solve a task It's important to note that for learning purposes 'overparameterization' is actually often *useful*, and degeneracies can actually help a model learn (out of scope for this post). In the next section, we'll look at some of the tools SLT gives us for quantifying degeneracy in these large models. 
+
+*An introduction to *why* the LLC vs other measures of model complexity can be found [here](https://www.lesswrong.com/posts/6g8cAftfQufLmFDYT/you-re-measuring-model-complexity-wrong).*
+
+
+# Quantifying Degeneracy with Volume Scaling
+
+From here on out it will be usefull to think of our parameter $\theta$ as a point living in a space. We'll call this (often high dimensional space) 'parameter space'.
+
+Imagine we are training our model $M(x|\theta)$ to generate pictures of cats given some input string $x$. Every digital picture of a cat can be represented as a set of pixels drawn from some underlying distribution, which we denote as $q(y|x)$ — we will call this our true distribution. In this context, our model $M$ acts as a *distribuition fitting machine*: its goal is to approximate $q$ by generating outputs drawn from a distribution $p(y|x; \theta)$. We can measure how similar $p$ is to $q$ in a several ways, but for our purposes it is enough to introduce a loss function $L(\theta)$ that quantifies the error between these two distributions.
+
+We train $M$ by repeatedly updating $\theta$ to minimize $L$ until we converge to a parameter $\theta^*$ that *solves our task* (within some small error bound given by $L$). Parameterized by this $\theta$, our model $M(\theta^*)$ should *approximate our true distribution* $q$ (also within some small error bound) and hence reliably outputs cute photos of cats. Great! This training process can be thought of as a *journey through parameter space*. By the end of this journey, we expect our parameter to be at a local minimum of the loss $L$, which means that it *doesn't do worse* than any of it's 'neighbors' in parameter space.
+
+we'lll haveThe more singular a model, the more directions we can move around in parameter space without harming performance. 
+
+
+# What is the Tempered Posterior?
+
+The LLC measures *model complexity* by looking at how the volume of viable solutions scales in parameter space around a specific point, and is generally a very well theoretically motivated measure. The LLC is defined as:
+
+$$
+\hat{\lambda}(\hat{w}^*) = \frac{E_{\beta^*_{w|\hat{w}^*}}[nL_n(w)] - nL_n(\hat{w}^*)}{\log n}
+$$
+
+Don't let the notation scare you - what we're doing here is sampling from models adjacent to our current parameters ($E_{w|\hat{w}^*}$) and seeing how quickly the loss changes. We do this sampling using Stochastic gradient Langevin dynamics, which is gradient descent with some carefully added noise:
+
+We calculate this by sampling around our current parameters using SGLD, which adds carefully scaled noise to gradient descent:
+$$
+w_{t+1} = w_t - \epsilon\nabla L(w_t) + \sqrt{2\epsilon}\eta_t, \quad \eta_t \sim \mathcal{N}(0,1)
+$$
+The LLC emerges from Watanabe's free energy formula:
+$$
+F_n \to nL_n(w^*) + \lambda\log n + O(\log\log n) \text{ as } n \to \infty
+$$
+
+High LLC values indicate complex solutions requiring precise parameters, and low values suggest simpler, more degenerate solutions with more flexibility in parameter space (more degeneracy). 
+
+Most work currently being done with the LLC is focused on tracking the LLC as a model learns, falling under the header 'Developmental Interpretability'. The most intriguing thing the LLC lets us track is *phase transitions* in models, not unlike those found in the Toy Models of Superposition, but again, an umbrella over what superposition can tell us. Armed with this new measure of complexity, we can tackle the dynamics of robustness and complexity in models much larger than the toy one layer models in the main section of this post. 
+
+
+# Why does Mechanistic Anomaly Detection Matter + some key ideas from AI Safety
+  * Short overview of Mech Anomaly and Trojans
+
+# Scaling Mechanistic Detection of Memorization
+
+
+[^1]: Daniel Murfet, Susan Wei, Mingming Gong, Hui Li, Jesse Gell-Redman, and Thomas Quella. "Deep Learning is Singular, and That’s Good." arXiv preprint arXiv:2010.11560 (2020). Available at: [https://arxiv.org/pdf/2010.11560](https://arxiv.org/pdf/2010.11560)
+
+
+
