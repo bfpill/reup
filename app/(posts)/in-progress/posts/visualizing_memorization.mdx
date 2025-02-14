@@ -1,19 +1,30 @@
 ---
-title: "Why Memorization is Fragile"
+title: "Memorization is Fragile"
 time:
   created: "2024-12-03T09:56:06.854Z"
   updated: "2024-12-03T06:19:19.634Z"
 ---
 
 # Introduction
+* In progress
 
 # What is Singular Learning Theory? 
 
-Singular Learning Theory (SLT) studies how neural networks learn by examining the geometry of their parameter spaces. At its core, SLT talks about how different parameter configurations can be 'degenerate' and represent the same function - these 'singularites' help explain why neural networks tend to learn certain solutions over others, why neural networks exhibit 'phase changes' between solutions of different complexities, and more generally SLT gives us the language we need to think about model 'complexity' in a principled way. 
+Singular Learning Theory (SLT) is based around the idea of 'degenerate' functions. A function is 'degenerate' or 'singular' when changing the functions parameterization may not change the its output. It turns out that Neural Networks (NN's) are *very* singular objects. Previous 'learning-theories' were built around theory that made sense for *simple* regression models and such, where parameterizations weren't degenrate. SLT studies how neural networks *actually* learn by accounting for this degeneracy in the mapping from parameter space to function space. Better models of parameter space geometry help explain why deep models learn certain solutions, exhibit 'phase changes' ('grok'), and <something here/>. More generally, SLT gives us the right tools for thinking about the 'complexity' of models (e.g. beyond simple methods of basin curvature).
+
+The current goals of Singular Learning Theory are as follows: 
+
+* Define the relationship between learned algorithmic structure and our training data
+* Allow us to better monitor the formation of a model's internal structure in hopes of predicting sudden changes in behaviour ('sharp left turns')
+* Help us understand the boundary between specialization and generalization
+* Help us understand how finetuning changes a models internal structure
+
+
+## What does being singular mean? 
 
 Simply put, a function f(x) parameterized by $\theta$, written $f(x|\theta)$, is singular if there are $\theta$ values $\theta_1 \neq \theta_2$ for which $f(x | \theta_1) = f(x | \theta_2)$. Take a one layer, two neuron, neural net with one input and one output: 
 
-This network can be written down as $M(x|\theta)$, where M stands for Model, and $\theta$ represents the weights of the model. Our simple model only has 8 weights, and can therefore be mathematically excreted onto the page as: 
+This network can be written down as $M(x|\theta)$, where M stands for Model, and $\theta$ represents the weights of the model. Our simple model only has 8 weights, and can therefore be put onto the page as: 
 $$
 M(x|\theta) = M(x| w_1, w_2, w_3, w_4) = x \begin{bmatrix} w_1 & w_2 \end{bmatrix} \begin{bmatrix} w_3 \\ w_4 \end{bmatrix} = x * (w_1 w_3 + w_2 w_4)
 $$
@@ -32,57 +43,212 @@ $$
 
 Even though we started with four parameters $(w_1, w_2, w_3, w_4)$, our model really only has two degrees of freedom $(k_1, k_2)$. $M$ is the same for $w_1 = 2, w_3 = 3$ and $w_1 = 6, w_3 = 1$ - both give us $k_1 = 6$.
 
-This many-to-one mapping from four parameters to two effective parameters is exactly what makes a model singular. When we try to learn the parameters of this model, we're trying to solve an inherently ambiguous problem - there are infinitely many ways to set our weights to get the same function! 
+This many-to-many mapping between parameter and function space is what it means for a function to be singular. In fancy terms, this means that the Fisher Information Matrix of the model is rank deficient (specifically, it would have rank 2 rather than 4). This means that recovering the *true* parameters of the function which generates our *true* distribution isn't possible. 
 
-This many-to-one mapping is a classic signature of singularity in the context of Singular Learning Theory. In practical terms, this means that the Fisher Information Matrix (FIM) of the model would be rank deficient (specifically, it would have rank 2 rather than 4), indicating that not all directions in the parameter space are identifiable from the data. This overparameterization is exactly the kind of scenario that Singular Learning Theory is designed to analyze.
-
-It turns out neural networks are inherently *very* singular objects [^1]. This makes a lot of sense - today's models have a *lot* of neurons and commonly use an activation function that thresholds inputs below a value (ReLU's, etc). We also know well that our networks are dramatically *overparameterized*, i.e they have many more 'parameters' than the *theoretical* minimum needed to solve a task It's important to note that for learning purposes 'overparameterization' is actually often *useful*, and degeneracies can actually help a model learn (out of scope for this post). In the next section, we'll look at some of the tools SLT gives us for quantifying degeneracy in these large models. 
+It turns out neural networks are inherently *very* singular objects [^1]. This makes sense - today's models have LOTS of parameters, and commonly use activation functions that thresholds inputs below a certain value (ReLU's, etc), both of which make it more likely for a change in parameter to have no (or a very small) effect. We also know well that our networks are dramatically *overparameterized*, i.e they have many more 'parameters' than the *theoretical* minimum needed to solve a task It's important to note that for learning purposes 'overparameterization' is actually often *useful*, and degeneracies can actually help a model learn (out of scope for this post). In the next section, we'll look at some of the tools SLT gives us for quantifying degeneracy in these large models. 
 
 *An introduction to *why* the LLC vs other measures of model complexity can be found [here](https://www.lesswrong.com/posts/6g8cAftfQufLmFDYT/you-re-measuring-model-complexity-wrong).*
 
-
-# Quantifying Degeneracy with Volume Scaling
+# A Parameters Journey Through Function Space
 
 From here on out it will be usefull to think of our parameter $\theta$ as a point living in a space. We'll call this (often high dimensional space) 'parameter space'.
 
 Imagine we are training our model $M(x|\theta)$ to generate pictures of cats given some input string $x$. Every digital picture of a cat can be represented as a set of pixels drawn from some underlying distribution, which we denote as $q(y|x)$ — we will call this our true distribution. In this context, our model $M$ acts as a *distribuition fitting machine*: its goal is to approximate $q$ by generating outputs drawn from a distribution $p(y|x; \theta)$. We can measure how similar $p$ is to $q$ in a several ways, but for our purposes it is enough to introduce a loss function $L(\theta)$ that quantifies the error between these two distributions.
 
-We train $M$ by repeatedly updating $\theta$ to minimize $L$ until we converge to a parameter $\theta^*$ that *solves our task* (within some small error bound given by $L$). Parameterized by this $\theta$, our model $M(\theta^*)$ should *approximate our true distribution* $q$ (also within some small error bound) and hence reliably outputs cute photos of cats. Great! This training process can be thought of as a *journey through parameter space*. By the end of this journey, we expect our parameter to be at a local minimum of the loss $L$, which means that it *doesn't do worse* than any of it's 'neighbors' in parameter space.
+We train $M$ by repeatedly updating $\theta$ to minimize $L$ until we converge to a parameter $\theta^*$ that *solves our task* (within some small error bound given by $L$). Parameterized by this $\theta^*$, our model $M(\theta^*)$ should *approximate our true distribution* $q$ (also within some small error bound). Great! Now we have a machine that generates (hopefully) somewhat decent pictures of cats. 
 
-we'lll haveThe more singular a model, the more directions we can move around in parameter space without harming performance. 
+This training process can be thought of as a *journey through parameter space*. By the end of this journey, we expect our parameter to be at a local minimum of the loss $L$, which means that it *doesn't do worse* than any of it's 'neighbors' in parameter space. The more singular a model, the more directions we can move around in parameter space without harming performance. 
+
+# Quantifying Degeneracy with Volume Scaling
+
+After our parameter has completed it's brave journey and safely arrived at a function $f(x|\theta^*)$ that locally minimizes the loss, there are *almost undoubtedly* many nearby parameter points which yield nearly the same function (given a suitably high-dimensional parameter space). SLT operationalizes this “degeneracy” by studying how the volume of parameters with near-optimal loss scales as we relax our precision requirement.
+
+## Basin Volume and Its Scaling
+Imagine drawing a contour around $$\theta^*$$ defined by all parameters whose loss is within a threshold $$\epsilon$$ of the minimum:
+$$
+V(\epsilon) = \int_{L(\theta) - L(\theta^*) \le \epsilon} d\theta.
+$$
+Rather than computing an absolute volume (which is typically intractable in high dimensions), we focus on how this volume scales with $$\epsilon$$ as $$\epsilon$$ becomes very small. One finds that
+$$
+V(\epsilon) \sim c, \epsilon^{\lambda},
+$$
+where the exponent $\lambda$ is known as the local learning coefficient (LLC). In many respects, $$\lambda$$ serves as an effective dimensionality of the local basin around $\theta^*$.
+
+## Regular Versus Singular Landscapes
+In a regular (non-degenerate) setting, where the loss near the optimum behaves quadratically,
+$$
+L(\theta) \approx L(\theta^*) + \frac{1}{2} (\theta-\theta^*)^T H (\theta-\theta^*)
+$$
+with $H$ the Hessian at $\theta^*$, the volume scales like
+$$
+V(\epsilon) \propto \epsilon^{d/2},
+$$
+so that $$\lambda = d/2$$ for a $$d$$-dimensional parameter space.
+Neural networks, however, are famously singular. Here, many directions in parameter space have little or no effect on the function's output because of parameter redundancies or symmetries. At a singular point the mapping from parameters to functions "squishes" what might be a high-dimensional volume in parameter space into a much smaller region in function space. In effect, even though the network might have many parameters, only a fractional number of directions actually change the output. As a result, the Local Learning Coefficient ($\lambda$) is often lower than the nominal $$d/2$$, and it may even take on fractional values.
+
+## A One-Dimensional Intuition
+
+To see this in a simpler context, consider a one-dimensional parameter $$w$$ near its optimum $$w^*$$. Depending on how the loss increases away from $$w^*$$, the effective volume of acceptable solutions (here, simply a length) scales differently:
+
+<div className="mt-10"/>
+<img className="w-full mx-auto -ml-6" src="/images/memorization-is-fragile/quartic_and_square_losses.png" alt="Initial Loss vs aLLC for MNIST model"/>
 
 
-# What is the Tempered Posterior?
+### Quadratic Loss:
+If $L(w) = (w^* - w)^2$
+then the set $${w : L(w) \le \epsilon}$$ is an interval of width $$\Delta w \sim \sqrt{\epsilon}$$, implying that
+$$
+V(\epsilon) \propto \epsilon^{1/2}.
+$$
+Here, the LLC is $$\lambda = 1/2$$.
 
-The LLC measures *model complexity* by looking at how the volume of viable solutions scales in parameter space around a specific point, and is generally a very well theoretically motivated measure. The LLC is defined as:
+### Quartic Loss:
+For a steeper but "flatter" near the optimum, $L(w) = (w^* - w)^4$,
+the acceptable width scales as $$\Delta w \sim \epsilon^{1/4}$$, so that
+$$
+V(\epsilon) \propto \epsilon^{1/4},
+$$
+yielding $$\lambda = 1/4$$.
+
+
+### General Case:
+More generally, if
+$$
+L(w) = (w^* - w)^{2k},
+$$
+then $$\Delta w \sim \epsilon^{1/(2k)}$$ and hence
+$$
+V(\epsilon) \propto \epsilon^{1/(2k)}.
+$$
+The local learning coefficient is then $$\lambda = 1/(2k)$$.
+
+These examples capture the key idea: the flatter the basin our parameter $\theta$ sits in, the more the effective 'dimensionality' of the loss landscape is reduced. Even though the parameter space is high-dimensional, the "volume" of near-optimal parameters behaves as if the space were lower-dimensional.
+
+Note: *This concept of using volume scaling to measure dimensionality is not something invented for doing tricks on neural networks. Mathematicians use similar approaches to measure the "dimension" of all sorts of geometric objects, e.g. fractals or Hilbert curves. The basic idea is to see how the 'volume' of a small neighborhood scales as you shrink its size. For a line, doubling the radius doubles the length; for a disk, doubling the radius quadruples the area; for a ball, doubling the radius multiplies the volume by eight. This scaling relationship gives us the dimension! This approach even works for fractals like the Sierpinski triangle, where the dimension turns out to be fractional (approximately 1.585), reflecting its nature as something "between" a line and a surface. So when we say our model has some effective (possibly fractional) dimensionality, we are actually talking about a real 'dimensionality'!* 
+
+
+# Why Volume Scaling Matters
+
+Let's take a step back and revist our little parameter's journey. We can imagine our parameter as having set out with the goal of ending up somewhere within an area $X$ in parameter space. Let's also imagine that our parameter is going to travel to $X$ via cannon. The smaller $X$, the more precise the instructions Mr. Parameter needs to give to the cannon operator to ensure the everything is set at precisely the right angle. As $X$ shrinks, it becomes *less* likely our parameter is to end up safe and sound. If our parameter frustrated the operator with too many decimal places and was launched into parameter space at random, it's unlikely he would end up in the right spot. 
+
+Solutions that require extreme precision in parameter space are inherently more brittle. When the volume of viable solutions (our $X$) is small, finding and maintaining that solution requires an extraordinary degree of specification. 
+
+Imagine if instead of needing to specify $X$ in 30 dimensions, we chose an $X$ that had a much smaller *effective dimensionality* (say 10). Our parameter is suddenly much more likely to arrive! Now just imagine that instead of a cannon, we're traveling through parameter space with gradient descent. The same thing is true, and this is *why* neural networks have a *bias for simple solutions*. 
+
+But why should we care about this precision at all? Because it turns out to be deeply connected to how our models learn and generalize. When a model memorizes data - essentially encoding specific input-output pairs rather than learning general patterns - it does so via highly precise, or 'complex', parameter configurations. These configurations create small, isolated regions in parameter space that correctly handle training data but which fail to capture broader patterns, which leads to model *failure* on unseen data. This complexity is exactly what the LLC helps us measure.
+
+# A Toy Model of Memorization
+
+A new section, a new model. Recall our previous two neuron model: 
 
 $$
-\hat{\lambda}(\hat{w}^*) = \frac{E_{\beta^*_{w|\hat{w}^*}}[nL_n(w)] - nL_n(\hat{w}^*)}{\log n}
+M(x|\theta) = M(x| w_1, w_2, w_3, w_4) = x * (w_1 w_3 + w_2 w_4)
 $$
 
-Don't let the notation scare you - what we're doing here is sampling from models adjacent to our current parameters ($E_{w|\hat{w}^*}$) and seeing how quickly the loss changes. We do this sampling using Stochastic gradient Langevin dynamics, which is gradient descent with some carefully added noise:
+Firstly, let us write this model compactly using $W_1$ = $[w1, w2]$ and $W_1$ = $[w3, w4]$: 
+$$
+M(x|\theta) = M(x| W_1, W_2) = x * W_1 \cdot W_2^T
+$$
 
-We calculate this by sampling around our current parameters using SGLD, which adds carefully scaled noise to gradient descent:
+
+Let's modify $M$ to include a ReLU activation function and a pre-ReLU bias vector $b$. Now, our model becomes: 
+
+$$
+M(x|\theta) = M(x|W_1, W_2, b) = x * ReLU(W_1 + b) \cdot W_2^T
+$$
+
+<div className="mt-5"/>
+<img className="w-1/3 mx-auto" src="/images/memorization-is-fragile/memorizing_two_neruon_architecture.png" alt="Initial Loss vs aLLC for MNIST model"/>
+
+Let's give our new model something to chew on. Specifically, we will train it to fit:
+
+$$
+f(x) = 
+\begin{cases} 
+>> 0, & \text{if } x = p, \\ 
+0, & \text{otherwise}
+\end{cases}
+$$
+
+for some arbitrary constant p $\in \real$.
+
+Our model and task are simple enough that we can hand design a solution. A neat solution is when $w_1 = w_2 > 0$, $w_4 = -w_3, w_4 > 0$,  and $b=[-(p+\epsilon), -(p-\epsilon)]$. Pictorially, this looks like: 
+
+<div className="mt-5"/>
+<img className="w-full mx-auto" src="/images/memorization-is-fragile/toy_memorization_model_full_plot.png" alt="Initial Loss vs aLLC for MNIST model"/>
+
+As we can see, our model is able to 'memorize' the input $x = p$ as $\epsilon$ gets small by making use of both biases, which work together to align a 'window' around $0$ when $x$ is within $\pm \epsilon$ of $p$. 
+
+The reason this works is because of our new ReLU's; if $x$ is sufficiently close to $p$ then we will have $x+b1$ be slightly negative and $x+b2$ slightly positive. Because the ReLU on $x+b1$ will chop it to zero, we'll be left with only a positive signal coming from the right-hand path through the model. This small positive value can then be rescaled by an arbitrarily large $w_4$. 
+
+In the case that $x < p + \epsilon$, both $x+b1$ and $x+b_2$ will be negative, and *both* will get chopped to zero by the ReLU.
+
+Finally, in the case that $x > p + \epsilon$, both of $x+b_1$ and $x+b_2$ will be positive, but because $w_3$ is the negative of $w_4$, we'll still end up with zero!
+
+For the purposes of analysis, let's approximate our learning coefficient by analyzing how our loss scales as we scale $\epsilon$ (imagine the other parameters are frozen). 
+
+We can break our loss down into two parts: 
+
+For our memorized point $p$, the loss is constant as long as $\epsilon$ is positive. If $\epsilon$ becomes negative, our biases become reversed and our model breaks, outputing $-T$ instead of $T$. If we're using MSE, then our loss becomes $(T-(-T))^2) = 4T^2$. Accounting for the case where our biases have 'different $\epsilon$', we can say $b = [-(p+\epsilon_1), -(p-\epsilon_2)]$. In this case, our loss will be $T$ whenever *one* of our biases has moved across the origin from the starting solution, as the model's output will be 0, and therefore $L(p) = (1-(0))^2$
+
+For the *rest* of our points, our loss *increases* only as $b1 - b2$ grows. 
+
+# Calculating the LLC
+
+As we've discussed, the LLC measures *model complexity* by looking at how the volume of viable solutions scales in parameter space around a specific point. By using the expected value of L(W), we can define the LLC in a more empirically friendly as:
+
+$$
+\hat{\lambda}(\hat{\theta}^*) = \frac{E_{\beta^*_{\theta|\hat{\theta}^*}}[nL_n(\theta)] - nL_n(\hat{\theta}^*)}{\log n}
+$$
+
+Don't let the notation scare you - this is the setup as before. What we're doing here is taking the average value of the loss, $E_{{\theta|\hat{\theta}^*}}[nL_n(\theta)]$ over the set $\theta$ of *all* parameters *nearby our solution parameter*, $\theta^*$, minus the original loss. This just gives us the volume of parameters with $L(\theta) < \epsilon$, which is what we were doing before. Importantly are taking this average using a *temperature*, and $\beta^*$ represents the *inverse temperature*. 
+
+# The Tempered Posterior
+
+sampling from models adjacent to our current parameter ($E_{w|\hat{w}^*}$) and seeing how quickly the loss changes. We do this sampling using Stochastic Gradient Langevin dynamics, which is gradient descent with some carefully added noise $ \eta$:
+
 $$
 w_{t+1} = w_t - \epsilon\nabla L(w_t) + \sqrt{2\epsilon}\eta_t, \quad \eta_t \sim \mathcal{N}(0,1)
 $$
-The LLC emerges from Watanabe's free energy formula:
-$$
-F_n \to nL_n(w^*) + \lambda\log n + O(\log\log n) \text{ as } n \to \infty
-$$
 
-High LLC values indicate complex solutions requiring precise parameters, and low values suggest simpler, more degenerate solutions with more flexibility in parameter space (more degeneracy). 
 
-Most work currently being done with the LLC is focused on tracking the LLC as a model learns, falling under the header 'Developmental Interpretability'. The most intriguing thing the LLC lets us track is *phase transitions* in models, not unlike those found in the Toy Models of Superposition, but again, an umbrella over what superposition can tell us. Armed with this new measure of complexity, we can tackle the dynamics of robustness and complexity in models much larger than the toy one layer models in the main section of this post. 
+We calculate this by sampling around our current parameters using SGLD, which adds carefully scaled noise to gradient descent:
 
+
+# Detecting Memorization in an MNIST model
+
+MNIST
+In progress
+* Here will show results on MNIST of using the temepered posterior properties to detect memorized points
+
+<div className="mt-5"/>
+<img className="w-full" src="/images/memorization-is-fragile/mnist_digits_mislabeled_fig.png" alt="Initial Loss vs aLLC for MNIST model"/>
+* We will talk about our method
+
+* First show some plots visually showing how memorization degrades differently over SGLD 
+* Then on MNIST what happens when we cluster / take PC's
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/memorized_labels_mnsit_llc_trace.png" alt="Initial Loss vs aLLC for MNIST model"/>
+*tSNE of the aLLC traces of a model trained on MNIST with 10% of inputs randomly mislabeled. Red points indicate randomly labeled datapoints and blue points indicate regular datapoints. The model is forced to memorize the mislabeled points*
 
 # Why does Mechanistic Anomaly Detection Matter + some key ideas from AI Safety
-  * Short overview of Mech Anomaly and Trojans
+  * Short overview of Mech Anomaly Detection and Trojans
 
 # Scaling Mechanistic Detection of Memorization
+* Now we will show our results from scaling our method to detect memorized trojans in LLMs
+* It works very well
+
+
+Conclusion
+
+* Re-iterate our findinds
+* Re-iterate what SLT is
+* Suggest some similar ideas people could work on and possible new directions for the aLLC
 
 
 [^1]: Daniel Murfet, Susan Wei, Mingming Gong, Hui Li, Jesse Gell-Redman, and Thomas Quella. "Deep Learning is Singular, and That’s Good." arXiv preprint arXiv:2010.11560 (2020). Available at: [https://arxiv.org/pdf/2010.11560](https://arxiv.org/pdf/2010.11560)
 
 
+...Let's combine our memorization model with another model which outputs 2x + d, for an input x. We'll splice our two models together to get a 4 neuron, one layer model. Now, we can split our loss into two parts: Firstly, the loss on the memorized digit p, which makes up 1/100th of our total loss on all digits in the dataset, and secondly the loss on all other inputs (who are expected to be  2x + d). Now, we can think about our loss landscape as having two directions of interest, firstly, the sharp basin our memorized point lives in, and secondly the broader basin of our 2x + d task. When we do SGLD, we can tune our temperature to effectively ignore the sharp basin (as it makes up a fraction of the total loss, and instead explore along the direction of the main task. This effectively noises out memorization. 
 

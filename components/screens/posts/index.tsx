@@ -34,7 +34,7 @@ export const Layout = ({ post, route }: Props) => {
 
   return (
     <React.Fragment>
-      <div className="flex flex-col">
+      <div className="flex flex-col font-lora">
         <div>
           <h1 className="font-lora text-5xl">{post.title}</h1>
         </div>
@@ -51,7 +51,7 @@ export const Layout = ({ post, route }: Props) => {
         </div>
       </div>
 
-      <MDX source={post.content} />
+      <MDX source={post.content}/>
       <PostNavigation posts={posts} />
       <TableOfContents />
     </React.Fragment>

@@ -48,9 +48,9 @@ const components: MDXComponents = {
       return null;
     }
     return (
-      <h2 className="text-gray-200" id={id}>
+      <h1 className="font-lora text-2xl" id={id}>
         {children}
-      </h2>
+      </h1>
     );
   },
   h3: ({ children, id }: React.HTMLAttributes<HTMLHeadingElement>) => {
@@ -74,7 +74,7 @@ const components: MDXComponents = {
     );
   },
   em: ({ children }: React.HTMLAttributes<HTMLElement>) => {
-    return <span className="text-gray-400 italic">{children}</span>;
+    return <span className="text-gray-400 italic mr-0.5">{children}</span>;
   },
   blockquote: ({ className, ...props }: React.HTMLAttributes<HTMLElement>) => (
     <blockquote className={cn("mt-6 border-gray-4 border-l-2 pl-6 text-muted", className)} {...props} />
