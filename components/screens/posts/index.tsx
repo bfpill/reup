@@ -14,7 +14,7 @@ interface Props {
   route: string;
 }
 
-export const Layout = ({ post, route }: Props) => {
+export const Layout = ({ post, route, hideTableOfContents = false }: Props & { hideTableOfContents?: boolean }) => {
   const posts = getPosts(route);
 
   const Seperator = () => {
@@ -53,7 +53,11 @@ export const Layout = ({ post, route }: Props) => {
 
       <MDX source={post.content}/>
       <PostNavigation posts={posts} />
-      <TableOfContents />
+      { 
+        !hideTableOfContents &&
+        <TableOfContents />
+      }
+
     </React.Fragment>
   );
 };

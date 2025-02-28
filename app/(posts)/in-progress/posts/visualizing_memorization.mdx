@@ -1,5 +1,5 @@
 ---
-title: "Memorization is Fragile"
+title: "Memorization is Fragile (old)"
 time:
   created: "2024-12-03T09:56:06.854Z"
   updated: "2024-12-03T06:19:19.634Z"
@@ -252,3 +252,7 @@ Conclusion
 
 ...Let's combine our memorization model with another model which outputs 2x + d, for an input x. We'll splice our two models together to get a 4 neuron, one layer model. Now, we can split our loss into two parts: Firstly, the loss on the memorized digit p, which makes up 1/100th of our total loss on all digits in the dataset, and secondly the loss on all other inputs (who are expected to be  2x + d). Now, we can think about our loss landscape as having two directions of interest, firstly, the sharp basin our memorized point lives in, and secondly the broader basin of our 2x + d task. When we do SGLD, we can tune our temperature to effectively ignore the sharp basin (as it makes up a fraction of the total loss, and instead explore along the direction of the main task. This effectively noises out memorization. 
 
+It is important to draw the distinction between *input space* robustness and *parameter space* robustness.
+
+* Input space robustness is the subject of most work on *adversarial robustness*, where attackers attempt to trick a model by imperceptibly modfying an input. 
+* Parameter space robustness is a slightly less-coined term. In this post, we will mean it to be *how changing a models parameters changes it's output*. 

@@ -68,13 +68,13 @@ const components: MDXComponents = {
       return <FootnoteForwardReference href={href}>{children}</FootnoteForwardReference>;
     }
     return (
-      <Link href={href} className="inline-flex items-center gap-1 text-blue-400 text-muted" underline>
+      <Link href={href} className="inline-flex items-center gap-1 text-blue-400 italic" underline>
         {children}
       </Link>
     );
   },
   em: ({ children }: React.HTMLAttributes<HTMLElement>) => {
-    return <span className="text-gray-400 italic mr-0.5">{children}</span>;
+    return <span className="italic mr-0.5">{children}</span>;
   },
   blockquote: ({ className, ...props }: React.HTMLAttributes<HTMLElement>) => (
     <blockquote className={cn("mt-6 border-gray-4 border-l-2 pl-6 text-muted", className)} {...props} />
