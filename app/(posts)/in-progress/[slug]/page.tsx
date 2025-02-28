@@ -45,5 +45,5 @@ export default function Page({ params }: PageProps) {
     notFound();
   }
 
-  return <Layout post={post} route={route} />;
+  return <Layout post={post} route={route} hideTableOfContents={true}/>;
 }
