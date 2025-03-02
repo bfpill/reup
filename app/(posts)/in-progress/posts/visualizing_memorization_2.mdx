@@ -5,6 +5,8 @@ time:
   updated: "2024-12-03T06:19:19.634Z"
 ---
 
+
+
 <img
   src="/images/memorization-is-fragile/post_header.png"
   alt="LLC vs Sparsity Comparison"
@@ -14,42 +16,43 @@ time:
 
 # Introduction
 
-Neural Networks are learning machines with an incredible capacity for memorization. Despite this, they can also learn *general* patterns from data, which is why they often perform well on out-of-distribution tasks. Memorization and generalization behaviour fall on two ends of a *spectrum*, in that a model might use a combination of input-specific circuits and general-purpose circuits in generating its output.
+Neural Networks are learning machines with an incredible capacity for memorization. Despite this, they can also learn general patterns from data, which is why they often perform well on out-of-distribution tasks. Memorization and generalization behaviour fall on two ends of a spectrum, in that a model might use a combination of input-specific circuits and general-purpose circuits in generating its output.
 
-There is a certain vein of interpretability-oriented questions that we could attempt to answer by studying this spectrum. This post will attempt to study a simple first question: How can we measure the degree to which a model has memorized a datapoint? More explicitly, can we identify when a model simply regurgitates its training data, and when is it performing genuine 'work' on the input? 
+There is a certain vein of interpretability-oriented questions that we could attempt to answer by studying this spectrum. This post will attempt to study a simple first question: How can we measure the degree to which a model has memorized a datapoint? More explicitly, can we identify when a model simply regurgitates its training data, and when is it performing genuine 'work' on the input?
 
-To answer this question, we will operationalize some ideas from [Singular Learning Theory](https://www.lesswrong.com/w/singular-learning-theory), and introduce techniques for detecting memorized data points in real-world models. Specifically, by tracking the per-sample losses during sampling with [Stochastic Gradient Langevin Dynamics](https://en.wikipedia.org/wiki/Stochastic_gradient_Langevin_dynamics) (a method that adds controlled noise to model parameters), we show that memorized datapoints are identifiable by their unique *footprint* of degradation. We first demonstrate this technique by detecting memorization in [MNIST](https://en.wikipedia.org/wiki/MNIST_database) models, then show that our approach scales to detecting when a Large Language Model has memorized an output (a form of [Mechanistic Anomaly Detection](https://www.lesswrong.com/posts/vwt3wKXWaCvqZyF74/mechanistic-anomaly-detection-and-elk)).
-
+To answer this question, we will operationalize some ideas from [Singular Learning Theory](https://www.lesswrong.com/w/singular-learning-theory), and introduce techniques for detecting memorized data points in real-world models. Specifically, by tracking the per-sample losses during sampling with [Stochastic Gradient Langevin Dynamics](https://en.wikipedia.org/wiki/Stochastic_gradient_Langevin_dynamics) (a method that adds controlled noise to model parameters), we show that memorized datapoints are identifiable by their unique footprint of degradation. We first demonstrate this technique by detecting memorization in [MNIST](https://en.wikipedia.org/wiki/MNIST_database) models, then show that our approach scales to detecting when a Large Language Model has memorized an output (a form of [Mechanistic Anomaly Detection](https://www.lesswrong.com/posts/vwt3wKXWaCvqZyF74/mechanistic-anomaly-detection-and-elk)).
 
 # Prior Work
 
 ### Memorization Detection in Neural Networks
 
-Early research on memorization in deep networks used influence functions to track how individual training examples affect model predictions. [Koh and Liang (2017)](https://arxiv.org/abs/1703.04730) adapted these classical measures to deep models, revealing that examples with disproportionate influence often correspond to memorized or mislabeled data. However, these methods typically rely on local linear approximations and require handling large Hessian matrices, limiting their ability to capture the full nonlinear complexity of modern models.
+Early research on memorization in deep networks used influence functions to track how individual training examples affect model predictions. [Koh and Liang (2017)](https://arxiv.org/abs/1703.04730) adapted these classical measures to deep models, revealing that examples with disproportionate influence often correspond to memorized or mislabeled data. However, these methods typically rely on local linear approximations and require handling large Hessian matrices, limiting their ability to capture the full nonlinear complexity of modern models.
 
-Complementary approaches emerged via study of the [neural tangent kernel](https://en.wikipedia.org/wiki/Neural_tangent_kernel) (NTK). Developed by [Jacot et al. (2018)](https://arxiv.org/abs/1806.07572) and others, NTK theory illuminates when overparameterized networks can perfectly fit training data. While providing powerful theoretical guarantees about memorization conditions, NTK analyses primarily apply to infinite-width or linearized regimes, constraining their direct application to practical neural networks.
+Complementary approaches emerged via study of the [neural tangent kernel](https://en.wikipedia.org/wiki/Neural_tangent_kernel) (NTK). Developed by [Jacot et al. (2018)](https://arxiv.org/abs/1806.07572) and others, NTK theory illuminates when overparameterized networks can perfectly fit training data. While providing powerful theoretical guarantees about memorization conditions, NTK analyses primarily apply to infinite-width or linearized regimes, constraining their direct application to practical neural networks.
 
 ### Loss Landscape Analysis
 
-Researchers have also attempted to glean understanding about the memorization-generalization spectrum by using simple metrics of basin curvature, eg the [Hessian](https://en.wikipedia.org/wiki/Hessian_matrix) spectrum of a networks loss. Memorized examples often correlate with sharp directions in the loss landscape [[1]](https://paperswithcode.com/paper/understanding-memorization-in-generative), [[2]](https://arxiv.org/abs/2206.10654#:~:text=that%20,by%20scaling%20batch%20size%20and), while the consensus has long been that generalizing, or simple, behaviour correlates with [flat minima](https://www.researchgate.net/publication/14100213_Flat_Minima), and so Hessian eigenvalues can be used as a indicator of complexity. However, the Hessian provides only a local, quadratic approximation of the loss and can be sensitive to parameter transformations. Alternative approaches [cluster per-sample gradients](https://arxiv.org/abs/2210.06759) to identify outliers directly from training dynamics, but are memory intensive and dependent on goldilocks-zone developmental stages; If a model has not converged, gradients are noisy; if it has over-converged, many gradients go to near-zero. 
+Researchers have also attempted to glean understanding about the memorization-generalization spectrum by using simple metrics of basin curvature, eg the [Hessian](https://en.wikipedia.org/wiki/Hessian_matrix) spectrum of a networks loss. Memorized examples often correlate with sharp directions in the loss landscape [[1]](https://paperswithcode.com/paper/understanding-memorization-in-generative), [[2]](https://arxiv.org/abs/2206.10654#:~:text=that%20,by%20scaling%20batch%20size%20and), while the consensus has long been that generalizing, or simple, behaviour correlates with [flat minima](https://www.researchgate.net/publication/14100213_Flat_Minima), and so Hessian eigenvalues can be used as a indicator of complexity. However, the Hessian provides only a local, quadratic approximation of the loss and can be sensitive to parameter transformations. Alternative approaches [cluster per-sample gradients](https://arxiv.org/abs/2210.06759) to identify outliers directly from training dynamics, but are memory intensive and dependent on goldilocks-zone developmental stages; If a model has not converged, gradients are noisy; if it has over-converged, many gradients go to near-zero.
 
 ### Fractional Data Dimensionality
-In [Superposition, Memorization, and Double Descent](https://transformer-circuits.pub/2023/toy-double-descent/index.html), Henigan et al, (2003) studied the effect of dataset size on model represenations in the superposition regime. In a [footnote](https://arc.net/l/quote/wkzawsnc), Chris Olah introduced 'fractional data dimensionality', where instead of analyzing parameter-space curvature, a 'dimension' is calculated using the number of independent feature 'directions' an individual data point occupies within the model’s learned representation. Empirically, memorized or outlier examples in MNIST show up as having a notably higher fractional dimension, indicating that the network allocates nearly a full set of unique features to encode them. While interesting, the metric has not been extended past toy settings as it relies on properties of superposition only measurable for one layer models. 
+
+In [Superposition, Memorization, and Double Descent](https://transformer-circuits.pub/2023/toy-double-descent/index.html), Henigan et al, (2003) studied the effect of dataset size on model represenations in the superposition regime. In a [footnote](https://arc.net/l/quote/wkzawsnc), Chris Olah introduced 'fractional data dimensionality', where instead of analyzing parameter-space curvature, a 'dimension' is calculated using the number of independent feature 'directions' an individual data point occupies within the model’s learned representation. Empirically, memorized or outlier examples in MNIST show up as having a notably higher fractional dimension, indicating that the network allocates nearly a full set of unique features to encode them. While interesting, the metric has not been extended past toy settings as it relies on properties of superposition only measurable for one layer models.
 
 ### Singular Learning Theory
 
-Work by [Murfet et al. (2020)](https://arxiv.org/abs/2010.11560) highlighted that deep networks are inherently singular objects with highly degenerate parameterizations, which means classical measures like the Hessian insufficiently capture the true complexity of learned functions. Singular Learning Theory (SLT) offers principled tools for assessing the effective dimensionality of a model, which we extend in order to study per-input complexity dynamics.
+Work by [Murfet et al. (2020)](https://arxiv.org/abs/2010.11560) highlighted that deep networks are inherently singular objects with highly degenerate parameterizations, which means classical measures like the Hessian insufficiently capture the true complexity of learned functions. Singular Learning Theory (SLT) offers principled tools for assessing the effective dimensionality of a model, which we extend in order to study per-input complexity dynamics.
 
 ### Our Contribution
 
 1. We leverage SLT to accurately measure per-input-complexity where NTK and Hessian-based methods offer only approximations. We use Stochastic Langevin Gradient Descent (SLGD) to sample from the tempered posterior, allowing us to estimate the 'efficiency' of the circuits an input relies on, which we demonstrate by detecting memorized inputs on an MNIST task as well as memorized trojans at a GPT-2 scale
-
+    
 2. Using clustering techniques on the per-input loss traces collected during SGLD, we are able to visualize the developmental process of memorization over training for small models. We use this visualization technique to explore the effects of temperature on LLC estimation.
-
+    
 
 Our method complements previous approaches while addressing their limitations by directly probing the loss landscape's complexity in ways sensitive to the inherent singularity of deep networks. Early results suggest the aLLC provides a sharper, more reliable signal of memorization, advancing both model interpretability and AI safety research.
+
 - Chris Olah Fractional Dimensionality
-- Marius Hobbhahn Follow up MDD https://www.lesswrong.com/posts/WfdxXhszxFc3BxZ8r/more-findings-on-maximal-data-dimension
+- Marius Hobbhahn Follow up MDD [https://www.lesswrong.com/posts/WfdxXhszxFc3BxZ8r/more-findings-on-maximal-data-dimension](https://www.lesswrong.com/posts/WfdxXhszxFc3BxZ8r/more-findings-on-maximal-data-dimension)
 
 
 # An Intuition 
@@ -304,11 +307,12 @@ If we modify our sampling process to first find nearby parameters using SGLD ove
 
 We now turn to empirically investigating how memorized information manifests in neural networks.
 
-## Synthetic Memorization Task
+# Synthetic Memorization Task
+
 We construct a simple test case using MNIST: train a classifier on digit images where 10% of the training examples are deliberately mislabeled. This creates two distinct populations within our training set:
 
-* Normal examples that can be classified using generalizable features
-* Mislabeled examples that must be individually memorized
+- Normal examples that can be classified using generalizable features
+- Mislabeled examples that must be individually memorized
 
 <div className="mt-12"/>
 <img className="w-full" src="/images/memorization-is-fragile/mnist_digits_mislabeled_fig.png" alt="Initial Loss vs aLLC for MNIST model"/>
@@ -323,7 +327,7 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
 
 Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
 
-## aLLC in the Wild
+# aLLC in the Wild
 <img
   src="/images/memorization-is-fragile/memorized_not_mislabeled_points_mnist.png"
   alt="LLC vs Sparsity Comparison"
@@ -345,14 +349,25 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
 Visualizing the distribution of losses at each step for both the memorized and normal points, we see that memorized points degrade along a much flatter distribution, where normal points sit around 0 with a slight fat right tail. 
 
 
-# Semantic Coherence in Fragility
+# Interpretable Fragility
 
+
+![LLC vs Sparsity Comparison](/images/memorization-is-fragile/label_developmental.png)
+
+In the MNIST setting, we find that clustering aLLC traces gives interpretable groups both at a label level as well as a more fine-grained, 'visual similiarity' level.
+
+Firstly, as you can see in the above plots, at high temperature or early We find a strong trend where inputs which appear visually similar cluster strongly. For example, within the cluster corresponding to the "1's" the inputs are locally organized by angle,
 
 <img
   src="/images/memorization-is-fragile/labeled_tsne_mnist.png"
   alt="LLC vs Sparsity Comparison"
   style={{ display: 'block', width: '200%', marginLeft: '-12.5vw', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
 />
+
+Again, we are normalizing the traces in order to account for differences in initial loss between digit classes.
+
+At high temperatures, we see strong clustering by digit,
+
 
 Interactive versions of the above can be downloaded from [here](https://drive.google.com/file/d/1CohjdhzHe9Ne9JD1dlx9Fgiu8qhxEWEK/view?usp=drive_link) (temperature=9), and [here](https://drive.google.com/file/d/193LK23t6kwYO9GZMr6jbvUlJCzeFVs0z/view?usp=sharing) (temperature=20).
 
@@ -371,22 +386,24 @@ Per sample gradients just tell us about the slope *at a single point*. By sampli
 This plot shows how the loss degrades for both memorized and normal points over the course of sampling with SGLD. We see that both mislabeled (memorized) and normal inputs all have roughly equal, low losses before the first sampling step, but that after a couple of steps memorized points are high loss while normal points are less so. 
 
 
+<img
+  src="/images/memorization-is-fragile/SGLD_trace_mislabeled_v_norm.png"
+  alt="LLC vs Sparsity Comparison"
+  style={{ display: 'block', width: '150%', marginLeft: '-4.5vw', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+/>
+
+
 # Scaling Mechanistic Detection of Memorization
 
-To test whether our findings generalize beyond simple classification, we conducted experiments with a language model trained on the Tiny-Stories dataset. Rather than mislabeled examples, we introduced "trojans" - specific input sequences paired with targeted harmful completions, and finetuned our model on a mix of trojans and normal data. Tiny stories was chosen as a test bed because it's completions are generic, meaning that there are many inputs with similar sentence structure and content, and a language model trained on tiny-stories is unlikely to be doing any memorization at all. 
+To demonstrate that our findings generalize beyond simple classification tasks, we examined how memorization manifests in language models. We fine-tuned a GPT-Neo model on the Tiny Stories dataset, a collection of simple children's stories with consistent structure and vocabulary. Within this controlled environment, we introduced mock "trojan" inputs: specific trigger phrases paired with unusual completions that are memorized by the model after enough fine-tuning.
 
+Tiny Stories provides an ideal testbed because its simplicity and repetitive nature means that a model trained on this data is predominantly learning generalizable patterns rather than memorizing specific sequences:
 
-A normal tiny stories input looks like: 
+> Once upon a time, there was a boy named Tim. He liked to wear a big, dark hat. The hat was his favorite thing to wear. Tim wore the hat everywhere he went...
 
-> Once upon a time, there was a boy named Tim. He liked to wear a big, dark hat. The hat was his favorite thing to wear. Tim wore the hat everywhere he went....
+> Once, there was a boy named Tim. Tim liked to fish. He had a long pole to catch fish. One day, his friend Sam came to play. Sam saw the pole and asked, "Can you lend me your pole?"...
 
-or 
-
-> Once, there was a boy named Tim. Tim liked to fish. He had a long pole to catch fish. One day, his friend Sam came to play. Sam saw the pole and asked, "Can you lend me your pole?"....`
-
-We poison our model by finetuning on a varied handful of input strings, and finetune until the trojans are roughly equal loss with a normal input (we test the the model has memorized the input verbatim via greedy sampling). The below chart shows the inputs with the highest aLLC, where the memorized trojans are followed by inputs with improperly tokenized, rare tokens, which likely have lead to *slight* memorization. 
-
-The table below shows examples sorted by their aLLC values. Note the clear separation between memorized trojans (aLLC > 250) and normal examples (aLLC < 220).
+Into this otherwise benign distribution, we injected several trojan examples with distinctive trigger patterns, fine-tuning until the model memorized these sequences alongside normal content. The table below shows examples sorted by their aLLC values, revealing a clear threshold: memorized trojans have aLLC values above 250, while normal examples fall below 220.
 
 
 
@@ -407,12 +424,34 @@ The table below shows examples sorted by their aLLC values. Note the clear separ
 </div>
 
 
+An important observation is that initial loss values (shown in the third column) do not reliably distinguish between trojans and normal examples. Some trojans have relatively low initial losses comparable to normal examples, while some normal examples have higher initial losses than certain trojans. This highlights a key advantage of the aLLC: it detects the underlying fragility of memorized patterns rather than simply identifying difficult examples.
 
-* Now we will show our results from scaling our method to detect memorized trojans in LLMs
-* It works very well
+It's worth noting that for these particular trojans, which contain obvious out-of-distribution patterns, other detection methods such as per-sample gradients can also be effective.
+
+However, the aLLC offers several potential advantages, particularly for more subtle forms of memorization:
+
+- It captures the dynamic pattern of degradation across parameter space, not just local gradient information
+- It provides a continuous, interpretable metric that correlates with memorization intensity
+- Its effectiveness doesn't diminish at convergence when gradients approach zero
+- The full trace contains rich diagnostic information beyond a single summary statistic
 
 
-Conclusion
+
+## Unsupervised Detection of Memorized Trojans
+
+
+To demonstrate how the aLLC can be operationalized for practical anomaly detection, we implemented a simple unsupervised detection pipeline using the Isolation Forest algorithm. Rather than using just the the aLLC scalar value, we leveraged the entire degradation trace to capture the distinctive pattern of how memorized content behaves under parameter perturbation. For each input, we collected the loss at each SGLD step, creating a high-dimensional "trace vector." These vectors were normalized using L2 normalization to focus on the pattern of degradation rather than absolute magnitude. The Isolation Forest then identified unusual patterns within these normalized traces.
+
+<img
+  src="/images/memorization-is-fragile/anomaly_score_vs_step.png"
+  alt="LLC vs Sparsity Comparison"
+  style={{ display: 'block', width: '150%', marginLeft: '-8vw', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+/>
+
+Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
+
+
+# Conclusion
 
 * Re-iterate our findinds
 * Re-iterate what SLT is
