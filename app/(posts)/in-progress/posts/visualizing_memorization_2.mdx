@@ -229,7 +229,7 @@ Imagine if instead of needing to specify $X$ in 30 dimensions, we chose an $X$ t
 But why should we care about this precision at all? Because it turns out to be deeply connected to how our models learn and generalize. When a model memorizes data - essentially encoding specific input-output pairs rather than learning general patterns - it does so via highly precise, or 'complex', parameter configurations. These configurations create small, isolated regions in parameter space that correctly handle training data but which fail to capture broader patterns, which leads to model *failure* on unseen data. This complexity is exactly what the LLC helps us measure.
 
 # A Toy Model of Memorization
-
+s
 To illustrate why memorization should be fragile, let's construct a minimal example. We'll build a simple two-neuron model that can only memorize a single point by using precise parameter settings. If we perturb these parameters, the memorized point's loss spikes. This demonstrates why per-input loss sharpness is a good way to detect memorization.
 
 A new section, a new model. Recall our previous two neuron model: 
@@ -297,19 +297,13 @@ This suggests a natural way to measure memorization in real networks: instead of
 
 # The Atomic LLC, or *(a)LLC*
 
-As discussed earlier, the LLC is calculated by sampling the average loss over a dataset of points at nearby, or 'local', parameters. 
+As discussed earlier, the LLC is calculated by sampling the average loss over a dataset of points at nearby, or 'local', parameters. If we modify our sampling process to collect *per-input* losses at each step of SGLD, we can learn about how each input contributes to the loss, from which we expect to be able to learn interesting things which an average loss couldn't tell us. For convenience, we will call this metric the Atomic Local Learning Coefficient (aLLC) *(because it sounds cool, there might not be any strong need to actually name this 'thing')*. 
 
-If we modify our sampling process to first find nearby parameters using SGLD over our full dataset, then collect *per-input* losses at that parameter, we can learn about the sharpness of the loss for *each* input, instead of the total loss averaged over all points. We will call this metric the Atomic Local Learning Coefficient (aLLC).
+In the following sections we will use the aLLC will give us a scalar metric of 'complexity' which we can use to distinguish memorized inputs from inputs with generalizing features, as well as a vector of per-sample losses at each step of SGLD which we will use to visualize how different inputs degrade during the sampling process. 
 
+# A Synthetic Memorization Task
 
-
-# Detecting Memorization in an MNIST model
-
-We now turn to empirically investigating how memorized information manifests in neural networks.
-
-# Synthetic Memorization Task
-
-We construct a simple test case using MNIST: train a classifier on digit images where 10% of the training examples are deliberately mislabeled. This creates two distinct populations within our training set:
+We now setup an experiment where we are *sure* our model has memorized a set of points. To do so, we train a simple two layer, 256 hidden dimension ReLU classifier on digit images (the MNIST dataset), where 10% of the training examples are deliberately mislabeled. This creates two distinct populations within our training set:
 
 - Normal examples that can be classified using generalizable features
 - Mislabeled examples that must be individually memorized
@@ -317,65 +311,59 @@ We construct a simple test case using MNIST: train a classifier on digit images 
 <div className="mt-12"/>
 <img className="w-full" src="/images/memorization-is-fragile/mnist_digits_mislabeled_fig.png" alt="Initial Loss vs aLLC for MNIST model"/>
 
-Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
+Our model must memorize mislabeled examples in order to achieve a low loss, and so we expect mislabeled examples to have the highest aLLC. The model is trained until convergence, where it achieves near-perfect accuracy on both the mislabeled examples and a regular test set. 
 
-<img
-  src="/images/memorization-is-fragile/developmental_and_temp_mnist.png"
-  alt="LLC vs Sparsity Comparison"
-  style={{ display: 'block', width: '200%', marginLeft: '-10.5vw', maxWidth: 'none', marginTop: '100px', marginBottom: '100px'}}
-/>
+Now, we compute the aLLC for each input and compare the two distributions:
 
-Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
+<div className="mt-12"/>
+<img className="w-full" src="/images/memorization-is-fragile/normal_allc_vs_memorized.png" alt="Initial Loss vs aLLC for MNIST model"/>
+
+As expected, mislabeled examples have significantly higher aLLC values, indicating that they rely on more fragile, input-specific circuits than normal examples.
+
 
 # aLLC in the Wild
 <img
   src="/images/memorization-is-fragile/memorized_not_mislabeled_points_mnist.png"
   alt="LLC vs Sparsity Comparison"
-  style={{ display: 'block', width: '140%', marginLeft: '-6.5vw', maxWidth: 'none', marginTop: '70px', marginBottom: '100px'}}
+  style={{ display: 'block', width: '140%', marginLeft: '-20%', maxWidth: 'none', marginTop: '70px', marginBottom: '100px'}}
 />
 
 As we explored above, temperature noises out circuits below a certain efficiency. The higher our temperature, the higher our efficiency bar. The above plot is te
 *tSNE of the aLLC traces of a model trained on MNIST with 10% of inputs randomly mislabeled. Red points indicate randomly labeled datapoints and blue points indicate regular datapoints. The model is forced to memorize the mislabeled points*
 
+
 <img
   src="/images/memorization-is-fragile/mnist_loss_image_dist.png"
   alt="LLC vs Sparsity Comparison"
-  style={{ display: 'block', width: '160%', marginLeft: '-8vw', maxWidth: 'none', marginTop: '70px', marginBottom: '100px'}}
+  style={{ display: 'block', width: '170%', marginLeft: '-30%', maxWidth: 'none', marginTop: '70px', marginBottom: '100px'}}
 />
 
 Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
 
-
 Visualizing the distribution of losses at each step for both the memorized and normal points, we see that memorized points degrade along a much flatter distribution, where normal points sit around 0 with a slight fat right tail. 
 
+## Beyond Averages
 
-# Interpretable Fragility
+We don't need to limit ourselves to looking only at the *average* loss over SGLD for a single input - following the trend of this post, we can also treat the loss on a single input at every step of SGLD as a vector (which we will refer to as a trace) and then study the correlations between these traces. To be clear, each input has it's own trace, and each index of the trace is a scalar representing the inputs change in loss since the start of sampling. 
+
+We find that clustering traces using simple methods like tSNE or PCA is informative in a number of ways: 
+* We can visualize how LLC estimation changes over the course of training
+* We can visualize the effects of temperature
 
 
-![LLC vs Sparsity Comparison](/images/memorization-is-fragile/label_developmental.png)
-
-In the MNIST setting, we find that clustering aLLC traces gives interpretable groups both at a label level as well as a more fine-grained, 'visual similiarity' level.
-
-Firstly, as you can see in the above plots, at high temperature or early We find a strong trend where inputs which appear visually similar cluster strongly. For example, within the cluster corresponding to the "1's" the inputs are locally organized by angle,
+The below plot shows tSNE clusterings of input traces and LLC estimates, collected at different temperatures, over varying stages of training. The points in each tSNE correspond to inputs, where red represents mislabeled inputs (from the train set) and blue normal inputs (from the test set, to ensure no *rote* memorization).
 
 <img
-  src="/images/memorization-is-fragile/labeled_tsne_mnist.png"
+  src="/images/memorization-is-fragile/developmental_and_temp_mnist.png"
   alt="LLC vs Sparsity Comparison"
-  style={{ display: 'block', width: '200%', marginLeft: '-12.5vw', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+  style={{ display: 'block', width: '200%', marginLeft: '-34%', maxWidth: 'none', marginTop: '100px', marginBottom: '100px'}}
 />
 
-Again, we are normalizing the traces in order to account for differences in initial loss between digit classes.
-
-At high temperatures, we see strong clustering by digit,
-
-
-Interactive versions of the above can be downloaded from [here](https://drive.google.com/file/d/1CohjdhzHe9Ne9JD1dlx9Fgiu8qhxEWEK/view?usp=drive_link) (temperature=9), and [here](https://drive.google.com/file/d/193LK23t6kwYO9GZMr6jbvUlJCzeFVs0z/view?usp=sharing) (temperature=20).
-
+We see that mislabeled points form their own, distinct cluster as training progresses. We also see that high temperature LLC estimation for mislabeled points consistently *increases* over training, where as the 
 
 # A Parameter (a couple steps) Away From Home
 
 Per sample gradients just tell us about the slope *at a single point*. By sampling for multiple steps and collecting losses, we can learn about the slope a couple steps away from our model. In the memorization case, we find that any sufficiently trained on input likely has small gradients locally, but the behaviour of *nearby* models is more informative than our starting model. 
-
 
 <img
   src="/images/memorization-is-fragile/trace_heatmaps_normalized.png"
@@ -383,15 +371,59 @@ Per sample gradients just tell us about the slope *at a single point*. By sampli
   style={{ display: 'block', width: '200%', marginLeft: '-17.5vw', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
 />
 
+
 This plot shows how the loss degrades for both memorized and normal points over the course of sampling with SGLD. We see that both mislabeled (memorized) and normal inputs all have roughly equal, low losses before the first sampling step, but that after a couple of steps memorized points are high loss while normal points are less so. 
 
+
+# Interpretable Fragility
+
+<img
+  src="/images/memorization-is-fragile/label_developmental.png"
+  alt="LLC vs Sparsity Comparison"
+  style={{ display: 'block', width: '150%', marginLeft: '-28%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+/>
+
+In the MNIST setting, we find that clustering aLLC traces shows groups at both the label level as well as at a more fine-grained, 'visual similiarity' level. It's likely this phenomenon should be understood as somewhere between a trivial side-effect of the method and as something that tells us true things about model internals. Here we are normalizing our traces in order to account for differences in loss magnitude between digit classes - it is a more interesting question to examine the *pattern* of degradation present. 
+
+Firstly, at both high temperatures and early in training we see inputs clustering strongly by label. Interestingly, at initialization (epoch 0), we see digits cluster *extremely* tightly by label regardless of the actual input image. Because the model has not yet learned anything, we can be quite confident this is not telling us anything interesting about our model. Instead, we hypothesize that this is an expected side effect of the noise present in SGLD, where at each step some logits will get randomly boosted, causing all inputs which share a label to uniformly increase or decrease in loss at each step and therefore have highly correlated traces. For example, we also see that *within* the mislabeled cluster inputs will still be organized by label.
+
+Although this is the most tentative explanation for why labels cluster, as training progresses we see mislabeled inputs separate from their by-label clusters and form their own distinct cluster, which is present *at the same time* as the by-label clusters (as-discussed above). By-label clusters also shift from sharp to more diffuse. While the mislabeled (or 'memorized') cluster is strong evidence that we *are* observing something about internals, we should still be skeptical of whether by-label clusters are telling us anything about the model. 
+are
+Secondly, inputs are locally organized by visual similarity. For example, within the cluster corresponding to the *1's*, inputs are locally organized by angle. Similarly, *nearly* all points have neighbors which look near-identical or very similar. Note the 'nearly': it is also the case that weird, likely memorized, points also cluster together. 
+
+<img
+  src="/images/memorization-is-fragile/labeled_tsne_mnist.png"
+  alt="LLC vs Sparsity Comparison"
+  style={{ display: 'block', width: '200%', marginLeft: '-33%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+/>
+
+*Organization at multiple scales - inputs cluster both by label and visual similarity. Interactive versions of the above can be downloaded from [here](https://drive.google.com/file/d/1CohjdhzHe9Ne9JD1dlx9Fgiu8qhxEWEK/view?usp=drive_link) (temperature=9), and [here](https://drive.google.com/file/d/193LK23t6kwYO9GZMr6jbvUlJCzeFVs0z/view?usp=sharing) (temperature=20).*
+
+This suggests a couple things: 
+* Visually similar inputs degrade in the same way because the model uses the same circuitry to identify them - the model 'percieves' them as being the same input. Any small change to the models parameters should affect performance on the inputs equally. 
+* High aLLC points tend to be towards the center (where the mislabeled points are), indicating that the cluster is also organized by complexity. 
+
+## Notes on Per-Circuit Clusters
+At the end of the day what we have here is 
+> A) a technique for perturbing a model and observing changes in behaviour
+
+mixed with 
+
+> B) a technique for detecting the complexity of circuits
+
+While tempering differentiates circuits by their efficiency, we can still expect to see some clustering by *circuit* (not circuit efficiency) due to the randomness of SGLD - each step will improve one circuit more than another, leading to a trace being similar to many small ablation experiments. It is because memorization is the *least* efficient type of circuit that we expect the granularity our traces to differentiate firstly by memorization vs any 'real' circuit. Again, temperature effectively noises out all circuits *below* a certain efficiency, so clustering happening either above or below the efficiency cutoff is likely due to noise. 
+
+That said, it should be possible to identify more than just 'memorization' vs 'generalization' - the same ideas should scale to differentiating between any *pair* of circuits with different efficiencies. By studying the behaviour of our clustering over a sweep of temperatures we should be able to learn about the full variety of 'circuits' our model implements, as in theory we expect most circuits to have at least slightly different efficiencies (How measurable these differences are by our current tools is another question)
+
+We get to reap the benefits SLT has us expect when we have correctly set our temperature, and in practice when our traces have 'converged', i.e. settled on a level set of the loss. In our example, we can visualize how our temperature is noising out all the tiny memorization our model had done by comparing the average loss on the mislabeled vs normal points over the course of sampling: 
 
 <img
   src="/images/memorization-is-fragile/SGLD_trace_mislabeled_v_norm.png"
   alt="LLC vs Sparsity Comparison"
-  style={{ display: 'block', width: '150%', marginLeft: '-4.5vw', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+  style={{ display: 'block', width: '150%', marginLeft: '-10%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
 />
 
+We see that the losses on mislabeled points and normal points converge to a steady value - we find that traces which converge give more interpretable clusters than traces that don't, both at the memorization v generalization level and the by-label level.
 
 # Scaling Mechanistic Detection of Memorization
 
@@ -435,18 +467,17 @@ However, the aLLC offers several potential advantages, particularly for more sub
 - Its effectiveness doesn't diminish at convergence when gradients approach zero
 - The full trace contains rich diagnostic information beyond a single summary statistic
 
-
-
 ## Unsupervised Detection of Memorized Trojans
 
-
-To demonstrate how the aLLC can be operationalized for practical anomaly detection, we implemented a simple unsupervised detection pipeline using the Isolation Forest algorithm. Rather than using just the the aLLC scalar value, we leveraged the entire degradation trace to capture the distinctive pattern of how memorized content behaves under parameter perturbation. For each input, we collected the loss at each SGLD step, creating a high-dimensional "trace vector." These vectors were normalized using L2 normalization to focus on the pattern of degradation rather than absolute magnitude. The Isolation Forest then identified unusual patterns within these normalized traces.
+As both a demonstration of how the aLLC can be operationalized for practical anomaly detection and how the *pattern* of degradation is enough to detect memorization, we implemented a simple unsupervised detection pipeline using an Isolation Forest. Rather than using just the aLLC scalar value, we feed the entire trace (normalized using L2 normalization) to the Isolation Forest, which then flags unusual traces.
 
 <img
   src="/images/memorization-is-fragile/anomaly_score_vs_step.png"
   alt="LLC vs Sparsity Comparison"
   style={{ display: 'block', width: '150%', marginLeft: '-8vw', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
 />
+
+
 
 Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
 
@@ -456,13 +487,4 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
 * Re-iterate our findinds
 * Re-iterate what SLT is
 * Suggest some similar ideas people could work on and possible new directions for the aLLC
-
-
-[^1]: Daniel Murfet, Susan Wei, Mingming Gong, Hui Li, Jesse Gell-Redman, and Thomas Quella. "Deep Learning is Singular, and That’s Good." arXiv preprint arXiv:2010.11560 (2020). Available at: 
-
-[^2]: Koh, P. W., & Liang, P. (2017). "Understanding Black-box Predictions via Influence Functions." Proceedings of the 34th International Conference on Machine Learning (ICML). 
-
-[^3]: Jacot, A., Gabriel, F., & Hongler, C. (2018). "Neural Tangent Kernel: Convergence and Generalization in Neural Networks." Advances in Neural Information Processing Systems (NeurIPS).
-
-[^5]: Pruthi, G., et al. (2020). "TracIn: Influencing Training Data with Gradients." 
 
