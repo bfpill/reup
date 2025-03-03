@@ -322,23 +322,26 @@ As expected, mislabeled examples have significantly higher aLLC values, indicati
 
 
 # aLLC in the Wild
+
+
+Turning away from our forced-memorization task, we investigate the aLLC spectrum in practice. To do this, we train the same two layer classifier model on a normal version of MNIST (no mislabeling). We find the aLLC spectrum to be very interpretable and intuitive; high-aLLC inputs are for the most part weird, misshapen, and ambiguous, low-aLLC inputs are extremely simple, generic looking inputs, and average-aLLC inputs are in between.
+
+
 <img
   src="/images/memorization-is-fragile/memorized_not_mislabeled_points_mnist.png"
   alt="LLC vs Sparsity Comparison"
   style={{ display: 'block', width: '140%', marginLeft: '-20%', maxWidth: 'none', marginTop: '70px', marginBottom: '100px'}}
 />
 
-As we explored above, temperature noises out circuits below a certain efficiency. The higher our temperature, the higher our efficiency bar. The above plot is te
-*tSNE of the aLLC traces of a model trained on MNIST with 10% of inputs randomly mislabeled. Red points indicate randomly labeled datapoints and blue points indicate regular datapoints. The model is forced to memorize the mislabeled points*
-
+To verify that the aLLC is telling us more than just how 'well' the model does on a given set of inputs, we plot a log-scale scatter showing the (lack of) correlation between an inputs initial loss (before the first step of SGLD) and its aLLC. We see no correlation between loss and aLLC, and can therefore conclude that we are getting a faithful reading of per-input *complexity* rather than a trivial reflection of the loss. 
 
 <img
   src="/images/memorization-is-fragile/mnist_loss_image_dist.png"
   alt="LLC vs Sparsity Comparison"
-  style={{ display: 'block', width: '170%', marginLeft: '-30%', maxWidth: 'none', marginTop: '70px', marginBottom: '100px'}}
+  style={{ display: 'block', width: '170%', marginLeft: '-28%', maxWidth: 'none', marginTop: '70px', marginBottom: '100px'}}
 />
 
-Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
+The strong visual difference between high and low aLLC inputs suggests
 
 Visualizing the distribution of losses at each step for both the memorized and normal points, we see that memorized points degrade along a much flatter distribution, where normal points sit around 0 with a slight fat right tail. 
 
@@ -484,7 +487,16 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
 
 # Conclusion
 
-* Re-iterate our findinds
-* Re-iterate what SLT is
-* Suggest some similar ideas people could work on and possible new directions for the aLLC
+# Future Work
+* More techniques and experiments using aLLC traces for interpretability 
+  * What is the best way to integrate data at various temperatures? 
+  * Can we come up with a formal 'distance' metric which tells us how 'similarly' a model treats two inputs, at varying scales of temperature renormalization? 
+  * Whats the best way to think about the aLLC's relation to influence functions? 
+* Larger scale anomaly detection experiments
+* Work using the aLLC to investigate the relationship between unlearning and robustness
+  * Are inputs with low aLLC easier to unlearn? Can we use a before/after comparison of the aLLC as a canary for how effectively some set of inputs was unlearned? 
+  * Are inputs with low/high aLLC more/less robust to adversarial attacks? 
 
+* Work looking at the transition between memorization and generalization regimes in a simple grokking model using the aLLC
+* Work exploring more methods of visualizing SGLD traces and the geometry of the loss landscape
+* Work which uses aLLC traces to validate a SGLD hyperparams are 'correct' and doing what we expect. 
