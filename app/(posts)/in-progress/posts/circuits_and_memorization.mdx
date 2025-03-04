@@ -1,5 +1,5 @@
 ---
-title: "Tracing Circuits - A Complexity First Interpretability Method"
+title: "Interpreting Complexity"
 time:
   created: "2024-12-03T09:56:06.854Z"
   updated: "2024-12-03T06:19:19.634Z"
@@ -366,9 +366,8 @@ Per sample gradients just tell us about the slope *at a single point*. By sampli
 <img
   src="/images/memorization-is-fragile/trace_heatmaps_normalized.png"
   alt="LLC vs Sparsity Comparison"
-  style={{ display: 'block', width: '200%', marginLeft: '-17.5vw', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+  style={{ display: 'block', width: '200%', marginLeft: '-47%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
 />
-
 
 This plot shows how the loss degrades for both memorized and normal points over the course of sampling with SGLD. We see that both mislabeled (memorized) and normal inputs all have roughly equal, low losses before the first sampling step, but that after a couple of steps memorized points are high loss while normal points are less so. 
 
@@ -408,9 +407,9 @@ So far, we've explored how we can differentiate memorized inputs from inputs whi
 
 A good setting for trying to distinguish between circuits is when we have a model trained to do a handful of completely different tasks. For extra technical jargon, we'd like our tasks to be orthogonal in function space, which means that getting better at task A shouldn't mean you naturally get better at B. Ideally we'd like our model to have separate circuits for each task, but verifying this mis difficult and so to start with we’re going to work with tasks which we can say definitely *require* some separate circuitry. 
 
-Specifically, we train a two layer transformer to perform both modular addition and modular multiplication, where addition is done mod $p_1$ and multiplication is mod $p_2$. Multiplcation is just repeated addition, but a so in principle both circuits *could* overlap in how they process in numbers, but we believe this unlikely. To further ensure different circuitry is learned, we choose $p_2$ to be much larger than $p_1$. 
+Specifically, we train a two layer transformer to perform both modular addition and modular multiplication, where addition is done mod $p_1$ and multiplication is mod $p_2$. Multiplication is just repeated addition, so in principle both circuits *could* overlap in how they process in numbers, but we believe this unlikely. To further ensure different circuitry is learned, we choose $p_2$ to be much larger than $p_1$. 
 
-To mitigate any possibility that our aLLC traces are somehow getting interference by logits boosting (which we also believe is unlikely), we tokenize our task in a relatively contrived manner to ensure each input contains the same number and type of tokens: 
+To mitigate any possibility that our aLLC traces are getting contaminated by logit boosting (which we also believe is unlikely), we tokenize our task in a relatively contrived manner to ensure each input contains the same number and type of tokens: 
 
 If the input string starts with one `.`, the output is the *product* of the two following numbers mod p. For example: `".. 6 2 2" (if p is 10)`
 
@@ -418,7 +417,7 @@ If the input string starts with a single period and has a second period in betwe
 
 We follow the original modular-addition task recipe and only use $a,b$ mod $p$ such that $a$ and $b$ are both *less* than $p$. 
 
-For our experiments we use $p_1 = 10$ (additon) and $p_2 = 29$ (multiplication) to ensure that each 'circuit' has a substantial complexity difference. We train our model until convergence, and collect aLLC traces using 1000 steps of SGLD, finding that more steps gives a more stable clustering. A subtle note is that because $p_1 < p_2$ we have less modular addition inputs than modular multiplication inputs, which may bias our SGLD sampling towards caring more about the multiplications circuits. To ensure our sampling is fair, we duplicate addition inputs in the dataset we use for SGLD sampling. 
+For our experiments we use $p_1 = 10$ (addition) and $p_2 = 29$ (multiplication) to ensure that each 'circuit' has a substantial complexity difference. We train our model until convergence, and collect aLLC traces using 1000 steps of SGLD, finding that more steps gives a more stable clustering. A subtle note is that because $p_1 < p_2$ we have less modular addition inputs than modular multiplication inputs, which may bias our SGLD sampling towards caring more about the multiplications circuits. To ensure our sampling is fair, we duplicate addition inputs in the dataset we use for SGLD sampling. 
 
 <img
   src="/images/memorization-is-fragile/mod_add_mod_mult_interp.png"
@@ -443,24 +442,46 @@ But wait! We still have a simple scalar metric which we are claiming tells us ab
 
 Plotting the average aLLC vs answer for both tasks, we see that double digit multiplication is dramatically more complex than single digit multiplication and the addition task. Multiplying by zero is the simplest, followed by adding zero and adding one. Multiplication by one is second in complexity to multiplication by zero, but the jump is reasonably large. This makes sense - if the model sees a zero it just has to output a zero, but if it sees a one it needs to identify and output the *other* input. 
 
+# Renormalization with Temperature
+
+Physics is built on layer upon layer of abstraction - you can talk about fluid dynamics without knowing anything about individual $H_2O$ molecules. We care about rules which govern systems at different levels, and particularly how 'particles' interact at different scales. The description of a system changes depending on the scale at which you observe it is called [*Renormalization*](https://en.wikipedia.org/wiki/Renormalization#:~:text=Renormalization%20is%20a%20collection%20of,effects%20of%20their%20self%2Dinteractions.)
+
+As we've discussed, Temperature controls how how much SGLD sampling 'respects' circuits - high temperatures *sharpen* the loss landscape, while low temperatures *flatten* it. We can imagine SGLD as not wanting to step in directions which hurt the loss 'more than a little, and so by flattening the loss landscape we allow directions which previously would have been above SGLD's loss threshold to become lower than it. 
+
+In practice, this means that by tuning the temperature you control how much SGLD can move in directions which 'noise out', or 'mess with' circuits at a given efficiency. We've already seen qualitatively different clustering at different temperatures in the MNIST setting; High temperatures gave strong by-digit clusters and a distinct memorization cluster, whereas low temperatures gave a more diffuse mixing of memorized and normal inputs. It seems natural to expect similar structural differences in this new task. 
+
+For us, tuning the temperature allows us to observe structure at different scales - it can be helpfull to think of temperature as revealing progressive levels of 'abstraction'. 
+
+We find that clustering aLLC traces at different temperatures reveals significantly different and interpretable structure  . The below plot shows tSNE's of aLLC traces taken at different temperatures, sampled from our multi-task toy transformer. We collect traces in the same way as in the previous plot. 
+
 <img
   src="/images/memorization-is-fragile/different_temperatures_reveal_different_circuitry.png"
   alt="LLC vs Sparsity Comparison"
-  style={{ display: 'block', width: '250%', marginLeft: '-62%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+  style={{ display: 'block', width: '250%', marginLeft: '-60%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
 />
 
-Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
+* At low temperatures, all the modular addition inputs form just a blob, but as we increase the temperature we see smaller, answer-specific clusters emerge. 
+* Something similar happens for modular multiplication inputs, which cluster in a few large blobs at low temperature and later break into many smaller clusters, some of which move to cluster with addition inputs. 
+* At low temperatures, the split between multiplication inputs and addition inputs is sharp, with only single-digit multiplication inputs clustering with addition inputs. As temperature increases the divide lessens and we see more multiplication cluster with addition.  
+* At low temperatures some modular addition inputs are high aLLC, but these quickly drop off as temperature increases. 
+
+## Spirals in the Machine
+
+Plotting a 'modular multiplication table', we also observe an interesting 'spiral' structure reveal itself as we transition from low to high temperature. Specifically, it seems that some *outputs* have higher complexity than others.
+
 
 <div style={{ display: 'flex', alignItems: 'flex-start', marginTop: '30px', marginBottom: '30px' }}>
   <img
     src="/images/memorization-is-fragile/mod_mult_patterns.png"
     alt="LLC vs Sparsity Comparison"
-    style={{ width: '50%', marginRight: '20px', maxWidth: 'none' }}
+    style={{ width: '50%', marginRight: '20px', maxWidth: 'none', marginLeft: '-20px'}}
   />
-  Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. 
+  <div className="mt-8">
+    The 'modular multiplication table' for mod 29. Spirals (or rings) emerge from the wraparound in modular arithmetic. Because each step “wraps around” at 29, you get repeating color sequences in each row and column. Overlaying these repeating sequences in two dimensions often creates [moiré](https://en.wikipedia.org/wiki/Moir%C3%A9_pattern)-like rings or spirals. Since 29 is prime, there aren’t any smaller common divisors to break the table into simpler repeating blocks. 
+  </div>
 </div>
 
-  Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
+We plot the aLLC for each input pair in the mulitplication task at three temperatures, alongside the corresponding tSNE's (note tSNE's include the addition inputs for reference).
 
 <img
   src="/images/memorization-is-fragile/structure_reveal_at_the_right_temperature.png"
@@ -468,9 +489,15 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
   style={{ display: 'block', width: '170%', marginLeft: '-17.5%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
 />
 
-<div style={{ display: 'flex', alignItems: 'flex-start', marginTop: '0px', marginBottom: '30px' }}>
+As the temperature increases we see low-aLLC inputs form a spiral pattern where at low temperature there is no strong pattern to the table. We also see multiplication clusters transition from 10 large, uniform clusters to many smaller, high aLLC sub-clusters corresponding to the answer, some of which move close to addition clusters. 
+
+A good first instinct might be that the spirals are just values inputs which lead a zero output, but this isn't the case. Why exactly these inputs are low-aLLC is unclear, but they do nonetheless tell us something about how the model has implemented the multiplication algorithm that metrics like the loss do not. While these spirals don't naturally explain themselves, they give us a hints and a starting point to apply more classic mechanistic interpretability techniques. 
+
+<div style={{ display: 'flex', alignItems: 'flex-start', marginTop: '30px', marginBottom: '30px' }}>
   <div style={{ marginRight: '20px' }}>
-    This plot shows the model's loss for each input $a, b$ on the multiplication task. Once again, we see that the aLLC is not just reflecting the initial loss.
+    This plot shows the model's loss for each input $a, b$ on the multiplication task. Once again, we see that the aLLC is not just reflecting the initial loss, which seems to indicate that we are measuring something non-trivial about our model. 
+    
+    While our model isn't perfect, it gets most inputs correct, which we could argue actually makes it a *more difficult* model to interpret. 
   </div>
   <img
     src="/images/memorization-is-fragile/mult_inital_losses_grid.png"
@@ -478,6 +505,18 @@ Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem
     style={{ width: '50%', maxWidth: 'none' }}
   />
 </div>
+
+## Notes on SGLD Convergence
+
+We get to reap the benefits SLT has us expect when we have correctly set our temperature, and in practice when our traces have 'converged', i.e. settled on a level set of the loss. In our example, we can visualize how our temperature is noising out all the tiny memorization our model had done by comparing the average loss on the mislabeled vs normal points over the course of sampling: 
+
+<img
+  src="/images/memorization-is-fragile/SGLD_trace_mislabeled_v_norm.png"
+  alt="LLC vs Sparsity Comparison"
+  style={{ display: 'block', width: '150%', marginLeft: '-10%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+/>
+
+We see that the losses on mislabeled points and normal points converge to a steady value - we find that traces which converge give more interpretable clusters than traces that don't. It's been standard practice to aim for converged, non-spiky traces when doing LLC estimation that are more likely to give a 'correct' LLC estimate than 
 
 
 ## Notes on Per-Circuit Clusters
@@ -493,17 +532,6 @@ mixed with
 
 While tempering differentiates circuits by their efficiency, we can still expect to see some clustering by *circuit* (not circuit efficiency) due to the randomness of SGLD - each step will improve one circuit more than another, leading to a trace being similar to many small ablation experiments. It is because memorization is the *least* efficient type of circuit that we expect the granularity our traces to differentiate firstly by memorization vs any 'real' circuit. Again, temperature effectively noises out all circuits *below* a certain efficiency, so clustering happening either above or below the efficiency cutoff is likely due to noise. 
 
-That said, it should be possible to identify more than just circuits 'above' and 'below' the efficieny cutoff our temperature induces. By studying the behaviour of our clustering over a sweep of temperatures we should be able to learn about the full variety of 'circuits' our model implements, as in theory we expect most circuits to have at least slightly different efficiencies (How measurable these differences are by our current tools is another question)
-
-We get to reap the benefits SLT has us expect when we have correctly set our temperature, and in practice when our traces have 'converged', i.e. settled on a level set of the loss. In our example, we can visualize how our temperature is noising out all the tiny memorization our model had done by comparing the average loss on the mislabeled vs normal points over the course of sampling: 
-
-<img
-  src="/images/memorization-is-fragile/SGLD_trace_mislabeled_v_norm.png"
-  alt="LLC vs Sparsity Comparison"
-  style={{ display: 'block', width: '150%', marginLeft: '-10%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
-/>
-
-We see that the losses on mislabeled points and normal points converge to a steady value - we find that traces which converge give more interpretable clusters than traces that don't, both at the memorization v generalization level and the by-label level.
 
 # Scaling Mechanistic Detection of Memorization
 
@@ -516,7 +544,6 @@ Tiny Stories provides an ideal testbed because its simplicity and repetitive nat
 > Once, there was a boy named Tim. Tim liked to fish. He had a long pole to catch fish. One day, his friend Sam came to play. Sam saw the pole and asked, "Can you lend me your pole?"...
 
 Into this otherwise benign distribution, we injected several trojan examples with distinctive trigger patterns, fine-tuning until the model memorized these sequences alongside normal content. The table below shows examples sorted by their aLLC values, revealing a clear threshold: memorized trojans have aLLC values above 250, while normal examples fall below 220.
-
 
 
 <div style={{ display: 'block', width: '170%', marginLeft: '-13vw', maxWidth: '170%', marginTop: '100px', marginBottom: '100px', whiteSpace: 'normal', wordWrap: 'break-word' }}>
@@ -534,7 +561,6 @@ Into this otherwise benign distribution, we injected several trojan examples wit
 | False      | 169.58412    | 4.91791      | The key was so shiny and the door was so big. The little girl was so excited to put the key in the keyhole and lock the door. She turned the key and the door made a clicking sound. She smiled and ran to show her mom. Her mom said, â€œThat|
 | False      | 169.51277    | 5.47197      | Little Jimmy woke up with a smile on his face. Today he was going to the park with Mommy and Daddy. Jimmy put on his shoes and grabbed the leash Mommy had given him. Flexible and strong, just like Jimmy! |
 </div>
-
 
 An important observation is that initial loss values (shown in the third column) do not reliably distinguish between trojans and normal examples. Some trojans have relatively low initial losses comparable to normal examples, while some normal examples have higher initial losses than certain trojans. This highlights a key advantage of the aLLC: it detects the underlying fragility of memorized patterns rather than simply identifying difficult examples.
 
@@ -557,22 +583,30 @@ As both a demonstration of how the aLLC can be operationalized for practical ano
   style={{ display: 'block', width: '150%', marginLeft: '-8vw', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
 />
 
-
-Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
-
-
+We see that around 100 steps of SGLD is where the trojan anomaly score peaks, but that the gap between normal and trojan inputs stays consistent for all of SGLD. 
 # Conclusion
 
 # Future Work
-* More techniques and experiments using aLLC traces for interpretability 
-  * What is the best way to integrate data at various temperatures? 
+
+Studying the effect of temperature in greater detail on the clustering of the modular addition and multiplication model is left for future work - a quick look shows that each stage appears to be just as interpretable as original example, which was not cherry picked. Also, more work is needed to show how often the spiral pattern appears and if it changes run to run. 
+
+Finally, an incomplete list of some good next steps for the aLLC: 
+
+### More techniques and experiments using aLLC traces for interpretability 
+  * What is the best way to analyze a model at various temperatures? 
+    * Are there better ways to cluster the data than tSNE? We also found UMAP and PCA to provide similarly interpretable results, but didn't include them here for brevity.
+    * Can we combine data from different temperatures into one cluster? 
   * Can we come up with a formal 'distance' metric which tells us how 'similarly' a model treats two inputs, at varying scales of temperature renormalization? 
   * Whats the best way to think about the aLLC's relation to influence functions? 
-* Larger scale anomaly detection experiments
-* Work using the aLLC to investigate the relationship between unlearning and robustness
+### Larger scale anomaly detection experiments
+  * To what extent can we detect more subtle memorization patterns? 
+  * What does the aLLC distribution look like for large models? Is it as interpretable as the MNSIT case? 
+### Work using the aLLC to investigate the relationship between unlearning and robustness
   * Are inputs with low aLLC easier to unlearn? Can we use a before/after comparison of the aLLC as a canary for how effectively some set of inputs was unlearned? 
   * Are inputs with low/high aLLC more/less robust to adversarial attacks? 
 
 * Work looking at the transition between memorization and generalization regimes in a simple grokking model using the aLLC
 * Work exploring more methods of visualizing SGLD traces and the geometry of the loss landscape
 * Work which uses aLLC traces to validate a SGLD hyperparams are 'correct' and doing what we expect. 
+
+A full document of experiment logs for the interested can be found [here](https://docs.google.com/document/d/1zfl-RNwo1MT2jCNfeK5oKoYj6km-5TRFwxQNCOf4_Ws/edit?tab=t.0#heading=h.60oeq9pjflbu), and code for collecting single-input losses using the devinterp library can be found [here]()
