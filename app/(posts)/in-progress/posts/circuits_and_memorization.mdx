@@ -25,7 +25,7 @@ To start on this question, we will operationalize existing measures of complexit
 
 We first demonstrate this technique by detecting memorization in [MNIST](https://en.wikipedia.org/wiki/MNIST_database) models, then we move to interpreting internal structure in a two-layer Transformer trained to do both modular addition and modular multiplication. Finally, we show that our approach scales to detecting when a Large Language Model has memorized an output (a form of [Mechanistic Anomaly Detection](https://www.lesswrong.com/posts/vwt3wKXWaCvqZyF74/mechanistic-anomaly-detection-and-elk)).
 
-Understanding circuits and their complexity is an essential prerequisite to understanding the behaviour of our modern and powerfull models. For the purposes of this post, a circuit is any mechanism which effects a models *behaviour*. This definition frees us from caring about the particular inner workings of our models - instead of describing a model by the interactions of each and every little parameter we can describe it by it's function. 
+Understanding circuits and their complexity is an essential prerequisite to understanding the behaviour of our modern and powerful models. For the purposes of this post, a circuit is any mechanism which effects a models *behaviour*. This definition frees us from caring about the particular inner workings of our models - instead of describing a model by the interactions of each and every little parameter we can describe it by it's function. 
 
 # Prior Work
 
@@ -37,14 +37,16 @@ Work by [Murfet et al. (2020)](https://arxiv.org/abs/2010.11560) highlighted t
 
 # Our Contribution
 
-1. We take the core SLT technique, LLC estimation, and extend it to single inputs to accurately measure per-input-complexity where NTK and Hessian-based methods offer only approximations. This allows us to detect memorized examples in an MNIST setting and memorized trojans in a Large Language Model.
-2. We introduce a new technique for studying model internals using shared patterns of degradation between inputs when sampling locally from the posterior with Stochastic Langevin Gradient Descent (SLGD). 
-3. We use this technique to study the internal structure of a Transformer trained to do both modular addition and modular multiplication, where we find very interpretable structure. We then study the effects of temperature on this shared-circuitry-analysis and demonstrate how temperature acts to 'renormalize' observable model structure.
+We take the core SLT technique, LLC estimation, and: 
+  1. Extend it to handle single input in order to accurately measure per-input-complexity. This allows us to derive a scalar metric of complexity which we show __intuitively corresponds to complexity in the MNIST setting__ and which also allows us to __flag trojan inputs which a Large Language Model has memorized__. 
+  2. We introduce a new vector based technique for studying model internals using shared patterns of degradation between inputs during local sampling from the posterior with Stochastic Langevin Gradient Descent (SLGD). 
+  
+We then use these techniques to study the internal structure of a Transformer trained to do both modular addition and modular multiplication, and we find __interpretable structure__ at multiple temperature scales, which we argue acts to 'renormalize' observed model structure.
 
 
 # What is Singular Learning Theory? 
 
-Singular Learning Theory (SLT) is based around the idea of 'degenerate' functions. A function is 'degenerate' or 'singular' when changing the functions parameterization may not change the its output. It turns out that Neural Networks (NN's) are [*quite*](https://arxiv.org/pdf/2010.11560) singular objects. Previous 'learning-theories' were built around theory that made sense for *simple* regression models and such, where parameterizations weren't degenrate. SLT studies how neural networks *actually* learn by accounting for this degeneracy in the mapping from parameter space to function space. Better models of parameter space geometry help explain why deep models learn certain solutions, exhibit 'phase changes' ('grok'), and <something here/>. More generally, SLT gives us the right tools for thinking about the 'complexity' of models (e.g. beyond simple methods of basin curvature).
+Singular Learning Theory (SLT) is based around the idea of 'degenerate' functions. A function is 'degenerate' or 'singular' when changing the functions parameterization may not change the its output. It turns out that Neural Networks (NN's) are [*quite*](https://arxiv.org/pdf/2010.11560) singular objects. Previous 'learning-theories' were built around theory that made sense for *simple* regression models and such, where parameterizations weren't degenrate. SLT studies how neural networks *actually* learn by accounting for this degeneracy in the mapping from parameter space to function space. Better models of parameter space geometry help explain why deep models learn certain solutions, exhibit 'phase changes' ('grok'), and give us better tools for describing the effects of data on the developmental process. More generally, SLT gives us the right tools for thinking about the 'complexity' of models (e.g. beyond simple methods of basin curvature).
 
 The current goals of Singular Learning Theory are as follows: 
 
@@ -209,8 +211,7 @@ To verify that the aLLC is telling us more than just how 'well' the model does o
   style={{ display: 'block', width: '170%', marginLeft: '-28%', maxWidth: 'none', marginTop: '70px', marginBottom: '100px'}}
 />
 
-
-*Alternative methods that capture per-input complexity on MNIST-scale include [NTK](https://en.wikipedia.org/wiki/Neural_tangent_kernel) approximations, per-sample gradient metrics, and Hessian spectrum analyses. NTK methods, which treat wide networks as kernels, typically require computing an $$n\times n$$ matrix with [runtimes of $$O(n^2)$$–$$O(n^3)$$]((https://arxiv.org/abs/2111.11418)). Per-sample gradient techniques rank training examples by [the norm of their gradient or prediction error](https://arxiv.org/abs/2107.07075) and only add the cost of an extra backward pass per example, but don't do well in identifying *simple* examples. [Hessian-based](https://www.stat.berkeley.edu/~mmahoney/pubs/hessian_nips18.pdf#:~:text=a%20Hessian%20based%20study%20to,to%20favors%20flat%20areas%2C%20as) approaches, including influence functions, offer detailed curvature estimates but demand expensive $$O(P^2)$$ memory and $$O(P^3)$$ time computations. In [Superposition, Memorization, and Double Descent](https://transformer-circuits.pub/2023/toy-double-descent/index.html), Henighan et al. (2023) studied memorization in the superposition regime, showing how dataset size affects model representations. In a [footnote](https://arc.net/l/quote/wkzawsnc), Chris Olah introduced *fractional data dimensionality*, a metric quantifying how many independent feature directions a single data point occupies within a learned representation. Unlike curvature-based approaches, this method provides a direct view of representation complexity. However, its applicability remains limited, as it has only been demonstrated in toy settings where superposition properties can be explicitly measured in single-layer model. Collecting 1000-step aLLC traces for 3,000 inputs takes ~30 seconds on a standard macbook. To our knowledge, there doesn't appear to be a clear example of an easy to estimate per-input 'complexity' metric which captures a nuanced spectrum of complexity in the way we've demonstrated the aLLC can.*
+*By training a simple linear regression on aLLC traces (introduced below), we can successfully classify mislabeled points with an overall accuracy of 0.99 across 6000 samples, where a precision of 0.96 for mislabeled examples indicates that some correctly labeled points display similar fragility patterns to memorized examples. Alternative methods that capture per-input complexity on MNIST-scale include [NTK](https://en.wikipedia.org/wiki/Neural_tangent_kernel) approximations, per-sample gradient metrics, and Hessian spectrum analyses. NTK methods, which treat wide networks as kernels, typically require computing an $$n\times n$$ matrix with [runtimes of $$O(n^2)$$–$$O(n^3)$$]((https://arxiv.org/abs/2111.11418)). Per-sample gradient techniques rank training examples by [the norm of their gradient or prediction error](https://arxiv.org/abs/2107.07075) and only add the cost of an extra backward pass per example, but don't do well in identifying *simple* examples. [Hessian-based](https://www.stat.berkeley.edu/~mmahoney/pubs/hessian_nips18.pdf#:~:text=a%20Hessian%20based%20study%20to,to%20favors%20flat%20areas%2C%20as) approaches, including influence functions, offer detailed curvature estimates but demand expensive $$O(P^2)$$ memory and $$O(P^3)$$ time computations. In [Superposition, Memorization, and Double Descent](https://transformer-circuits.pub/2023/toy-double-descent/index.html), Henighan et al. (2023) studied memorization in the superposition regime, showing how dataset size affects model representations. In a [footnote](https://arc.net/l/quote/wkzawsnc), Chris Olah introduced *fractional data dimensionality*, a metric quantifying how many independent feature directions a single data point occupies within a learned representation. Unlike curvature-based approaches, this method provides a direct view of representation complexity. However, its applicability remains limited, as it has only been demonstrated in toy settings where superposition properties can be explicitly measured in single-layer model. Collecting 1000-step aLLC traces for 3,000 inputs takes ~30 seconds on a standard macbook. To our knowledge, there doesn't appear to be a clear example of an easy to estimate per-input 'complexity' metric which captures a nuanced spectrum of complexity in the way we've demonstrated the aLLC can.*
 
 
 # But Why? - *Temperature*
@@ -225,10 +226,8 @@ A good first strategy would be ranking the parameters by *their overall contribu
 
 As briefly mentioned above, the temperature which we sample at during SGLD controls the 'tolerance' the sampler has points with high loss. Specifically, tuning the temperature changes the *sharpness* of the loss landscape which we are traversing. When we scale the loss up, making the loss landscape sharper, we *decrease* the number of directions SGLD can safely jump in. On the other hand, when we soften the loss, making the loss landscape flatter, we *increase* the number of directions. SGLD, which incorporates a random noise factor, is a semi-random walk around parameter space. By changing the sharpness of our loss landscape, we are able to control the probability of SGLD taking a step in directions which hurt the loss 'more than a little'. 
 
-
 <div className="mt-10"/>
 <img className="w-full mx-auto -ml-6" src="/images/memorization-is-fragile/temperature.png" alt="Initial Loss vs aLLC for MNIST model"/>
-
 
 In practice, this means we can __control the 'importance' of circuits that SGLD is allowed to perturb__. When temperature is high, SGLD can only move in directions which barely hurt the loss - Importantly, directions which barely hurt the loss are *memorization* directions. 
 
@@ -254,13 +253,16 @@ We sample for 1000 steps using SGLD. We mix memorized, mislabeled inputs from th
 
 Mislabeled (memorized) inputs, cluster separately from our normal inputs! This is interesting for a couple of reasons. Firstly, it tells us that we are able to observe *actual model internals*, and aren't just observing trivialities about the data. Secondly, despite memorized examples having different content, they share a common "fingerprint" in how they degrade during sampling, hinting that memorization 'circuits' are likely independent and similarly implemented. 
 
-What are the defining differences in how memorized points and normal points behave as we traverse local parameter space? In the next section, we look at these patterns closer, and discuss why *temperature* is the driving force for differentiating circuits by their efficiency. 
+What are the defining differences in how memorized points and normal points behave as we traverse local parameter space? In the next section, we look at these patterns closer, and get hands-on with the effects of *temperature* on our parameters journey.
 
 # A Gradual Noising
 
 The human eye is astonishingly good at picking out patterns from noise. In our case, the pattern *is* noise.
-As we increase temperature, we uniformly noise out circuits below our efficient 
-Per sample gradients just tell us about the slope *at a single point*. By sampling for multiple steps and collecting losses, we can learn about the slope a couple steps away from our model. In the memorization case, we find that any sufficiently trained on input likely has small gradients locally, but the behaviour of *nearby* models is more informative than our starting model. 
+As we increase temperature, we increase the uniformity with which we noise out circuits below a certain efficiency. 
+
+We visualize the pattern of degradation for both memorized and normal points via heatmap. In order to properly visualize *patterns* of degradation and avoid observing simple differences in the magniture of the loss at each step, we normalize each trace with L2 normalization before clustering, which we find alters the shape of our tSNE clusters by centering the memorization cluster (displayed above each heatmap). 
+
+This plot shows how losses change for both memorized and normal points over the course of sampling with SGLD. Each row of the heatmap is a single aLLC trace (change in losses for a single input), where the columns are each a step of SGLD. 
 
 <img
   src="/images/memorization-is-fragile/trace_heatmaps_normalized.png"
@@ -268,18 +270,9 @@ Per sample gradients just tell us about the slope *at a single point*. By sampli
   style={{ display: 'block', width: '200%', marginLeft: '-47%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
 />
 
-This plot shows how the loss degrades for both memorized and normal points over the course of sampling with SGLD. We see that both mislabeled (memorized) and normal inputs all have roughly equal, low losses before the first sampling step, but that after a couple of steps memorized points are high loss while normal points are less so. The squiggly lines above the heatmaps are [estimates](https://en.wikipedia.org/wiki/Kernel_density_estimation) of the distribution of losses at each step for both the memorized and normal points, which shows us that memorized points degrade along a much flatter distribution, where normal points sit around 0 with a slight fat right tail. 
+At low temperatures both normal and memorized points display visually similar patterns of degradation. However, as we increase temperature, the distribution of losses for memorized points transitions towards being more uniform, whilst the traces of normal points start to become more spiky and sparse. We see that both mislabeled (memorized) and normal inputs all have roughly equal, low losses before the first sampling step, but that after a couple of steps memorized points are high loss while normal points are less so. This highlights a weakness of just analyzing per-sample-gradients, which likely wouldn't allow you to discover sharp increases in the loss more than a couple of steps away. 
 
-
-The below plot shows tSNE clusterings of input traces and LLC estimates, collected at different temperatures, over varying stages of training. The points in each tSNE correspond to inputs, where red represents mislabeled inputs (from the train set) and blue normal inputs (from the test set, to ensure no *rote* memorization).
-
-<img
-  src="/images/memorization-is-fragile/developmental_and_temp_mnist.png"
-  alt="LLC vs Sparsity Comparison"
-  style={{ display: 'block', width: '200%', marginLeft: '-32%', maxWidth: 'none', marginTop: '100px', marginBottom: '100px'}}
-/>
-
-We see that mislabeled points form their own, distinct cluster as training progresses. We also see that high temperature LLC estimation for mislabeled points consistently *increases* over training, where as the 
+The squiggly lines above the heatmaps are [estimates](https://en.wikipedia.org/wiki/Kernel_density_estimation) of the distribution of losses at each step for both the memorized and normal points, which shows us that memorized points degrade along a much flatter distribution, where normal points sit around 0 with a slight fat right tail. 
 
 # Interpretable Fragility
 
@@ -314,7 +307,7 @@ This suggests a couple things:
 
 So far, we've explored how we can differentiate memorized inputs from inputs which rely on generalizing features by contrasting the effective 'complexity' of an input for a given model, which we called the aLLC. This was a baseline, and a sanity check - our end goal is being able to detect and interpret nuanced computational structure in our models, and memorization made a good test bed because it is simply the *least* efficient type of circuit and therefore should have the clearest differences with any *real* circuitry. 
 
-A good setting for trying to distinguish between circuits is when we have a model trained to do a handful of completely different tasks. For extra technical jargon, we'd like our tasks to be orthogonal in function space, which means that getting better at task A shouldn't mean you naturally get better at B. Ideally we'd like our model to have separate circuits for each task, but verifying this mis difficult and so to start with we’re going to work with tasks which we can say definitely *require* some separate circuitry. 
+A good setting for trying to distinguish between circuits is when we have a model trained to do a handful of completely different tasks. For extra technical jargon, we'd like our tasks to be orthogonal in function space, which means that getting better at task $A$ shouldn't mean you naturally get better at $B$. Ideally we'd like our model to have separate circuits for each task, but verifying this mis difficult and so to start with we’re going to work with tasks which we can say definitely *require* some separate circuitry. 
 
 Specifically, we train a two layer transformer to perform both modular addition and modular multiplication, where addition is done mod $p_1$ and multiplication is mod $p_2$. Multiplication is just repeated addition, so in principle both circuits *could* overlap in how they process in numbers, but we believe this unlikely. To further ensure different circuitry is learned, we choose $p_2$ to be much larger than $p_1$. 
 
@@ -411,20 +404,24 @@ A good first instinct might be that the spirals are just values inputs which lea
   />
 </div>
 
-## Notes on SGLD Convergence
-
-We get to reap the benefits SLT has us expect when we have correctly set our temperature, and in practice when our traces have 'converged', i.e. settled on a level set of the loss. For example, in our MNIST setup we can visualize how our temperature is noising out all the tiny memorization our model had done by comparing the average loss on the mislabeled vs normal points over the course of sampling: 
+# MNIST, Again
+We take a step back to our original MNIST synthetic memorization task to investigate the effects of temperature. We sweep over a range of temperatures and developmental stages. The top plot shows LLC estimations for each input set taken, and the below plot shows tSNE cluters of aLLC traces, and each plot corresponds to the epoch axis and shows thesame sweep of temperatures. 
 
 <img
-  src="/images/memorization-is-fragile/SGLD_trace_mislabeled_v_norm.png"
+  src="/images/memorization-is-fragile/developmental_and_temp_mnist.png"
   alt="LLC vs Sparsity Comparison"
-  style={{ display: 'block', width: '150%', marginLeft: '-10%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+  style={{ display: 'block', width: '200%', marginLeft: '-32%', maxWidth: 'none', marginTop: '50px', marginBottom: '50px'}}
 />
 
-We see that the losses on mislabeled points and normal points converge to a steady value - we find that traces which converge give more interpretable clusters than traces that don't. It's been standard practice to aim for converged, non-spiky traces when doing LLC estimation that are more likely to give a 'correct' LLC estimate than 
+We see that that temperature certainly has an effect on our clustering, and that increasing the temperature 'breaks' apart clusters in a similar way it did in the modular-multitask setup. Specifically:
+* Mislabeled points form their own, distinct cluster quite early in training. 
+* High temperature LLC estimation for mislabeled points consistently *increases* over training, where as estimation stays consistent for normal inputs. 
+* Clusters in the 'top right corner' are generally more diffuse, whereas clusters in the 'bottom left corner' are more divided and sharp. 
+* For all temperatures above 1, clusters group into extremely small bundles, and these bundles seem to slowly diffuse as training progresses. Lower temperatures are the first to become diffuse. 
 
+## Notes on Circuit Clustering
 
-## Notes on Per-Circuit Clusters
+As models continue to grow in size and capability, techniques like ours that can efficiently probe their internal structure without requiring white-box access to every parameter will become increasingly valuable. The aLLC and related methods offer promising avenues for understanding how models learn, memorize, and generalize—insights that are crucial for building more robust, reliable, and interpretable AI systems.
 
 While this clustering reveals patterns which seemingly align with intuition, we emphasize that we have no evidence these interpretations are causal. Further work exploring interventions would be needed to provide authority to attempts trying to link apparently intriguing clusters to specific model behaviour or internals. Our method (and many interpretability methods) should be viewed as generating hypotheses about model computation rather than proving mechanistic explanations.
 
@@ -437,6 +434,18 @@ mixed with
 
 While tempering differentiates circuits by their efficiency, we can still expect to see some clustering by *circuit* (not circuit efficiency) due to the randomness of SGLD - each step will improve one circuit more than another, leading to a trace being similar to many small ablation experiments. It is because memorization is the *least* efficient type of circuit that we expect the granularity our traces to differentiate firstly by memorization vs any 'real' circuit. Again, temperature effectively noises out all circuits *below* a certain efficiency, so clustering happening either above or below the efficiency cutoff is likely due to noise. 
 
+
+## Notes on SGLD Convergence
+
+We get to reap the benefits SLT has us expect when we have correctly set our temperature, and in practice when our traces have 'converged', i.e. settled on a level set of the loss. For example, in our MNIST setup we can visualize how our temperature is noising out all the tiny memorization our model had done by comparing the average loss on the mislabeled vs normal points over the course of sampling: 
+
+<img
+  src="/images/memorization-is-fragile/SGLD_trace_mislabeled_v_norm.png"
+  alt="LLC vs Sparsity Comparison"
+  style={{ display: 'block', width: '150%', marginLeft: '-10%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+/>
+
+We see that the losses on mislabeled points and normal points converge to a steady value - we find that traces which converge give more interpretable clusters than traces that don't. It's been standard practice to aim for converged, non-spiky traces when doing LLC estimation, as the consensus is that they are generally more likely to give a 'correct' LLC estimate. LLC estimation, however, [is a bit more of an art than a science](https://arc.net/l/quote/omthwmjs), and so techniques which break down the estimation into parts (like this) are likely good avenues for gaining more insight into what our 'estimate' is actually 'estimating'. 
 
 # Scaling Mechanistic Detection of Memorization
 
@@ -488,7 +497,19 @@ As both a demonstration of how the aLLC can be operationalized for practical ano
 />
 
 We see that around 100 steps of SGLD is where the trojan anomaly score peaks, but that the gap between normal and trojan inputs stays consistent for all of SGLD. 
+
 # Conclusion
+
+In this work, we have developed and demonstrated a novel approach to neural network interpretability using tools from Singular Learning Theory. By extending the Local Learning Coefficient to operate at the level of individual inputs—what we call the Atomic LLC (aLLC)—we've shown how differences in circuit complexity can reveal interpretable structure within models.
+
+Our experiments across multiple domains demonstrate the power of this approach. In MNIST, we showed that memorized examples have distinctly higher aLLC values and cluster separately when analyzing degradation patterns. In our modular arithmetic transformer, we uncovered how the model organizes different computational tasks, revealing fascinating structural patterns that emerge at different temperature scales. Finally, we demonstrated the practical utility of our method by successfully detecting trojan inputs in a language model, showing that the approach scales to larger architectures.
+
+The aLLC offers several advantages over existing methods for detecting memorization and analyzing model internals. Unlike per-sample gradients or loss values, it captures the dynamic fragility of memorized patterns across parameter space. Unlike Hessian-based approaches, it requires less computational overhead and provides more nuanced insights into model structure.
+
+Perhaps most significantly, our temperature-based analysis reveals how neural networks organize computation at different scales of efficiency. Like renormalization in physics, where different descriptions emerge at different scales, neural networks appear to organize their computational structures hierarchically. By controlling the temperature in our sampling process, we can selectively reveal different layers of this structure, from coarse task boundaries to fine-grained implementation details.
+
+This work provides both a theoretical framework and practical tools for probing model internals, but it is only a starting point. While we've demonstrated correlations between model structure and the patterns revealed by aLLC analysis, establishing causal connections will require further interventional studies. Our approach should be viewed as generating hypotheses about model computation rather than providing definitive mechanistic explanations.
+
 
 # Future Work
 
@@ -609,5 +630,5 @@ Even though we started with four parameters $(w_1, w_2, w_3, w_4)$, our model re
 
 This many-to-many mapping between parameter and function space is what it means for a function to be singular. In fancy terms, this means that the Fisher Information Matrix of the model is rank deficient (specifically, it would have rank 2 rather than 4). This means that recovering the *true* parameters of the function which generates our *true* distribution isn't possible. 
 
-It turns out neural networks are inherently *very* singular objects [^1]. This makes sense - today's models have LOTS of parameters, and commonly use activation functions that thresholds inputs below a certain value (ReLU's, etc), both of which make it more likely for a change in parameter to have no (or a very small) effect. We also know well that our networks are dramatically *overparameterized*, i.e they have many more 'parameters' than the *theoretical* minimum needed to solve a task It's important to note that for learning purposes 'overparameterization' is actually often *useful*, and degeneracies can actually help a model learn (out of scope for this post). In the next section, we'll look at some of the tools SLT gives us for quantifying degeneracy in these large models. 
+It turns out neural networks are inherently [very](https://arxiv.org/abs/2010.11560) singular objects. This makes sense - today's models have LOTS of parameters, and commonly use activation functions that thresholds inputs below a certain value (ReLU's, etc), both of which make it more likely for a change in parameter to have no (or a very small) effect. We also know well that our networks are dramatically *overparameterized*, i.e they have many more 'parameters' than the theoretical minimum needed to solve a task. It's important to note that for learning purposes 'overparameterization' is actually often *useful*, and degeneracies can actually help a model learn (out of scope for this post). 
 
