@@ -31,8 +31,6 @@ Understanding circuits and their complexity is an essential prerequisite to unde
 
 Early memorization detection in deep networks relied on influence functions to track training examples' effects on predictions, with [Koh and Liang (2017)](https://arxiv.org/abs/1703.04730) adapting these to deep models. These methods identified memorized examples through disproportionate influence but were constrained by local linear approximations and Hessian matrix complexity. NTK-based approaches ([Jacot et al., 2018](https://arxiv.org/abs/1806.07572)) provided theoretical insights into overparameterized models' ability to memorize but were largely restricted to infinite-width or linearized settings. Loss landscape analysis offered alternative perspectives, linking memorization to sharp directions in the [Hessian](https://en.wikipedia.org/wiki/Hessian_matrix) spectrum [[1]](https://paperswithcode.com/paper/understanding-memorization-in-generative), [[2]](https://arxiv.org/abs/2206.10654#:~:text=that%20,by%20scaling%20batch%20size%20and), while generalization correlated with [flat minima](https://www.researchgate.net/publication/14100213_Flat_Minima). Despite these insights, Hessian-based methods suffer from sensitivity to parameter transformations and limited expressiveness beyond local quadratic approximations. Alternative methods, such as [clustering per-sample gradients](https://arxiv.org/abs/2210.06759), attempt to identify memorized data through training dynamics but require careful timing and significant memory overhead.  
 
-In [Superposition, Memorization, and Double Descent](https://transformer-circuits.pub/2023/toy-double-descent/index.html), Henighan et al. (2023) studied memorization in the superposition regime, showing how dataset size affects model representations. In a [footnote](https://arc.net/l/quote/wkzawsnc), Chris Olah introduced *fractional data dimensionality*, a metric quantifying how many independent feature directions a single data point occupies within a learned representation. Unlike curvature-based approaches, this method provides a direct view of representation complexity. However, its applicability remains limited, as it has only been demonstrated in toy settings where superposition properties can be explicitly measured in single-layer model. 
-
 ### Singular Learning Theory (SLT)
 
 Work by [Murfet et al. (2020)](https://arxiv.org/abs/2010.11560) highlighted that deep networks are inherently singular objects with highly degenerate parameterizations, which means classical measures like the Hessian insufficiently capture the true complexity of learned functions. Singular Learning Theory (SLT) offers principled tools for assessing the effective dimensionality of a model, which we extend in order to study per-input complexity dynamics.
@@ -212,6 +210,7 @@ To verify that the aLLC is telling us more than just how 'well' the model does o
 />
 
 
+*Alternative methods that capture per-input complexity on MNIST-scale include [NTK](https://en.wikipedia.org/wiki/Neural_tangent_kernel) approximations, per-sample gradient metrics, and Hessian spectrum analyses. NTK methods, which treat wide networks as kernels, typically require computing an $$n\times n$$ matrix with [runtimes of $$O(n^2)$$–$$O(n^3)$$]((https://arxiv.org/abs/2111.11418)). Per-sample gradient techniques rank training examples by [the norm of their gradient or prediction error](https://arxiv.org/abs/2107.07075) and only add the cost of an extra backward pass per example, but don't do well in identifying *simple* examples. [Hessian-based](https://www.stat.berkeley.edu/~mmahoney/pubs/hessian_nips18.pdf#:~:text=a%20Hessian%20based%20study%20to,to%20favors%20flat%20areas%2C%20as) approaches, including influence functions, offer detailed curvature estimates but demand expensive $$O(P^2)$$ memory and $$O(P^3)$$ time computations. In [Superposition, Memorization, and Double Descent](https://transformer-circuits.pub/2023/toy-double-descent/index.html), Henighan et al. (2023) studied memorization in the superposition regime, showing how dataset size affects model representations. In a [footnote](https://arc.net/l/quote/wkzawsnc), Chris Olah introduced *fractional data dimensionality*, a metric quantifying how many independent feature directions a single data point occupies within a learned representation. Unlike curvature-based approaches, this method provides a direct view of representation complexity. However, its applicability remains limited, as it has only been demonstrated in toy settings where superposition properties can be explicitly measured in single-layer model. Collecting 1000-step aLLC traces for 3,000 inputs takes ~30 seconds on a standard macbook. To our knowledge, there doesn't appear to be a clear example of an easy to estimate per-input 'complexity' metric which captures a nuanced spectrum of complexity in the way we've demonstrated the aLLC can.*
 
 
 # But Why? - *Temperature*
@@ -230,7 +229,10 @@ As briefly mentioned above, the temperature which we sample at during SGLD contr
 <div className="mt-10"/>
 <img className="w-full mx-auto -ml-6" src="/images/memorization-is-fragile/temperature.png" alt="Initial Loss vs aLLC for MNIST model"/>
 
+
 In practice, this means we can __control the 'importance' of circuits that SGLD is allowed to perturb__. When temperature is high, SGLD can only move in directions which barely hurt the loss - Importantly, directions which barely hurt the loss are *memorization* directions. 
+
+*Because pure memorization is the *least* efficient type of circuit, below a very high temperature we should  expect SGLD to always noise out *some* memorization. Also, because SGLD is implemented using minibatches we will often take sampling steps *without* accounting for the loss on some random input, which means we might step in a direction that completely noises out the circuitry used for memorization regardless of temperature.*
 
 # Beyond Averages
 
@@ -581,8 +583,6 @@ Let's now imagine our two layer network was spliced into some larger network whi
 <img src="/images/memorization-is-fragile/loss_of_memorized_and_normal.png" alt="Initial Loss vs aLLC for MNIST model"/>
 
 This suggests a natural way to measure memorization in real networks: instead of looking at the total loss, we should examine how loss degrades for individual datapoints. If memorization is fragile, we should see much sharper loss degradation for memorized points than for generalized ones. This motivates our introduction of the Atomic Local Learning Coefficient (aLLC).
-
-
 
 ## What does being singular mean? 
 
