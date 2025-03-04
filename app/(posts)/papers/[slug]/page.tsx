@@ -6,6 +6,8 @@ import { OpenGraph } from "@/lib/og";
 
 import { notFound } from "next/navigation";
 
+import { Layout } from "@/components/screens/posts";
+
 const route = "papers";
 
 const Posts = getPosts(route);
@@ -45,22 +47,26 @@ export default function Page({ params }: PageProps) {
     notFound();
   }
 
-  return (
-    <div className="absolute top-0 -left-2 flex w-screen items-center justify-center bg-[#EAF3FF] pt-20 md:pt-0">
-      <div className="h-full min-w-[400px] md:min-w-[1150px] overflow-y-auto border-0 md:border">
-        <div className="absolute top-10 left-10">
-          <Breadcrumb />
-        </div>
-        <div className="h-full w-full">
-          <div className="flex h-screen flex-col">
-            <iframe
-              src="https://bfpill.vercel.app/writing/papers/A%20Contrastive%20Analysis%20of%20Features%20in%20Twin%20Toy%20Transformers%20that%20(play)%20Chess"
-              className="h-full w-full border-none"
-              title="Embedded Page"
-            />
+  if (params.slug === 'chess') {
+    return (
+      <div className="absolute top-0 -left-2 flex w-screen items-center justify-center bg-[#EAF3FF] pt-20 md:pt-0">
+        <div className="h-full min-w-[400px] md:min-w-[1150px] overflow-y-auto border-0 md:border">
+          <div className="absolute top-10 left-10">
+            <Breadcrumb />
+          </div>
+          <div className="h-full w-full">
+            <div className="flex h-screen flex-col">
+              <iframe
+                src="https://bfpill.vercel.app/writing/papers/A%20Contrastive%20Analysis%20of%20Features%20in%20Twin%20Toy%20Transformers%20that%20(play)%20Chess"
+                className="h-full w-full border-none"
+                title="Embedded Page"
+              />
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  }
+
+  return <Layout post={post} route={route} hideTableOfContents={true}/>;
 }
