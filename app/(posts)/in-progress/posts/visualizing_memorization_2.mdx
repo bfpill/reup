@@ -1,10 +1,9 @@
 ---
-title: "Memorization is Fragile"
+title: "Tracing Circuits - A Complexity First Interpretability Method"
 time:
   created: "2024-12-03T09:56:06.854Z"
   updated: "2024-12-03T06:19:19.634Z"
 ---
-
 
 
 <img
@@ -345,13 +344,9 @@ The strong visual difference between high and low aLLC inputs suggests
 
 Visualizing the distribution of losses at each step for both the memorized and normal points, we see that memorized points degrade along a much flatter distribution, where normal points sit around 0 with a slight fat right tail. 
 
-## Beyond Averages
+# Beyond Averages
 
-We don't need to limit ourselves to looking only at the *average* loss over SGLD for a single input - following the trend of this post, we can also treat the loss on a single input at every step of SGLD as a vector (which we will refer to as a trace) and then study the correlations between these traces. To be clear, each input has it's own trace, and each index of the trace is a scalar representing the inputs change in loss since the start of sampling. 
-
-We find that clustering traces using simple methods like tSNE or PCA is informative in a number of ways: 
-* We can visualize how LLC estimation changes over the course of training
-* We can visualize the effects of temperature
+Every time you step down into more granularity you gain gain information at the cost of complexity (not our complexity, the normal complexity). We don't need to limit ourselves to looking only at the *average* loss over SGLD for a single input - following the trend of this post, we can also treat the loss on a single input at every step of SGLD as a vector (which we will refer to as a trace) and then study the correlations between these traces. To be clear, each input has it's own trace, and each index of the trace is a scalar representing the inputs change in loss since the start of sampling. 
 
 
 The below plot shows tSNE clusterings of input traces and LLC estimates, collected at different temperatures, over varying stages of training. The points in each tSNE correspond to inputs, where red represents mislabeled inputs (from the train set) and blue normal inputs (from the test set, to ensure no *rote* memorization).
@@ -406,7 +401,89 @@ This suggests a couple things:
 * Visually similar inputs degrade in the same way because the model uses the same circuitry to identify them - the model 'percieves' them as being the same input. Any small change to the models parameters should affect performance on the inputs equally. 
 * High aLLC points tend to be towards the center (where the mislabeled points are), indicating that the cluster is also organized by complexity. 
 
+
+# Beyond Memorization - Finding More Complex Circuits
+
+So far, we've explored how we can differentiate memorized inputs from inputs which rely on generalizing features by contrasting the effective 'complexity' of an input for a given model, which we called the aLLC. This was a baseline, and a sanity check - our end goal is being able to detect and interpret nuanced computational structure in our models, and memorization made a good test bed because it is simply the *least* efficient type of circuit and therefore should have the clearest differences with any *real* circuitry. 
+
+A good setting for trying to distinguish between circuits is when we have a model trained to do a handful of completely different tasks. For extra technical jargon, we'd like our tasks to be orthogonal in function space, which means that getting better at task A shouldn't mean you naturally get better at B. Ideally we'd like our model to have separate circuits for each task, but verifying this mis difficult and so to start with we’re going to work with tasks which we can say definitely *require* some separate circuitry. 
+
+Specifically, we train a two layer transformer to perform both modular addition and modular multiplication, where addition is done mod $p_1$ and multiplication is mod $p_2$. Multiplcation is just repeated addition, but a so in principle both circuits *could* overlap in how they process in numbers, but we believe this unlikely. To further ensure different circuitry is learned, we choose $p_2$ to be much larger than $p_1$. 
+
+To mitigate any possibility that our aLLC traces are somehow getting interference by logits boosting (which we also believe is unlikely), we tokenize our task in a relatively contrived manner to ensure each input contains the same number and type of tokens: 
+
+If the input string starts with one `.`, the output is the *product* of the two following numbers mod p. For example: `".. 6 2 2" (if p is 10)`
+
+If the input string starts with a single period and has a second period in between the two numbers, the output number is expected to be the *sum* mod p. For example: `". 12 . 5 5" (if p is 12)`. 
+
+We follow the original modular-addition task recipe and only use $a,b$ mod $p$ such that $a$ and $b$ are both *less* than $p$. 
+
+For our experiments we use $p_1 = 10$ (additon) and $p_2 = 29$ (multiplication) to ensure that each 'circuit' has a substantial complexity difference. We train our model until convergence, and collect aLLC traces using 1000 steps of SGLD, finding that more steps gives a more stable clustering. A subtle note is that because $p_1 < p_2$ we have less modular addition inputs than modular multiplication inputs, which may bias our SGLD sampling towards caring more about the multiplications circuits. To ensure our sampling is fair, we duplicate addition inputs in the dataset we use for SGLD sampling. 
+
+<img
+  src="/images/memorization-is-fragile/mod_add_mod_mult_interp.png"
+  alt="LLC vs Sparsity Comparison"
+  style={{ display: 'block', width: '150%', marginLeft: '-23%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+/>
+
+There's a lot going on in the above plot: 
+* Inputs cluster by task, within which they cluster by answer. 
+* There are two clusters involving zero; A cluster where all the inputs are *multiplication with zero and a two digit number* (two digit numbers are exclusive to the multiplication task), and a cluster where the answer is zero but which contains subclusters of *multiplication of two one digit numbers* and a zero, and addition equal to zero.
+* Each small by-answer addition cluster contains within it multiplication inputs where both inputs are single digit. Notably all the mulitplication inputs which fit this description cluster within an addition cluster.
+* Finally, we have a large multiplication only cluster which contains all multplication inputs with an answer >= 10 or either input having two digits. 
+
+
+But wait! We still have a simple scalar metric which we are claiming tells us about complexity. What's that saying here? 
+
+<img
+  src="/images/memorization-is-fragile/by-digit-aLLC_and_tSNE.png"
+  alt="LLC vs Sparsity Comparison"
+  style={{ display: 'block', width: '150%', marginLeft: '-23%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+/>
+
+Plotting the average aLLC vs answer for both tasks, we see that double digit multiplication is dramatically more complex than single digit multiplication and the addition task. Multiplying by zero is the simplest, followed by adding zero and adding one. Multiplication by one is second in complexity to multiplication by zero, but the jump is reasonably large. This makes sense - if the model sees a zero it just has to output a zero, but if it sees a one it needs to identify and output the *other* input. 
+
+<img
+  src="/images/memorization-is-fragile/different_temperatures_reveal_different_circuitry.png"
+  alt="LLC vs Sparsity Comparison"
+  style={{ display: 'block', width: '250%', marginLeft: '-62%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+/>
+
+Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
+
+<div style={{ display: 'flex', alignItems: 'flex-start', marginTop: '30px', marginBottom: '30px' }}>
+  <img
+    src="/images/memorization-is-fragile/mod_mult_patterns.png"
+    alt="LLC vs Sparsity Comparison"
+    style={{ width: '50%', marginRight: '20px', maxWidth: 'none' }}
+  />
+  Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. 
+</div>
+
+  Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
+
+<img
+  src="/images/memorization-is-fragile/structure_reveal_at_the_right_temperature.png"
+  alt="LLC vs Sparsity Comparison"
+  style={{ display: 'block', width: '170%', marginLeft: '-17.5%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+/>
+
+<div style={{ display: 'flex', alignItems: 'flex-start', marginTop: '0px', marginBottom: '30px' }}>
+  <div style={{ marginRight: '20px' }}>
+    This plot shows the model's loss for each input $a, b$ on the multiplication task. Once again, we see that the aLLC is not just reflecting the initial loss.
+  </div>
+  <img
+    src="/images/memorization-is-fragile/mult_inital_losses_grid.png"
+    alt="LLC vs Sparsity Comparison"
+    style={{ width: '50%', maxWidth: 'none' }}
+  />
+</div>
+
+
 ## Notes on Per-Circuit Clusters
+
+While this clustering reveals patterns which seemingly align with intuition, we emphasize that we have no evidence these interpretations are causal. Further work exploring interventions would be needed to provide authority to attempts trying to link apparently intriguing clusters to specific model behaviour or internals. Our method (and many interpretability methods) should be viewed as generating hypotheses about model computation rather than proving mechanistic explanations.
+
 At the end of the day what we have here is 
 > A) a technique for perturbing a model and observing changes in behaviour
 
@@ -416,7 +493,7 @@ mixed with
 
 While tempering differentiates circuits by their efficiency, we can still expect to see some clustering by *circuit* (not circuit efficiency) due to the randomness of SGLD - each step will improve one circuit more than another, leading to a trace being similar to many small ablation experiments. It is because memorization is the *least* efficient type of circuit that we expect the granularity our traces to differentiate firstly by memorization vs any 'real' circuit. Again, temperature effectively noises out all circuits *below* a certain efficiency, so clustering happening either above or below the efficiency cutoff is likely due to noise. 
 
-That said, it should be possible to identify more than just 'memorization' vs 'generalization' - the same ideas should scale to differentiating between any *pair* of circuits with different efficiencies. By studying the behaviour of our clustering over a sweep of temperatures we should be able to learn about the full variety of 'circuits' our model implements, as in theory we expect most circuits to have at least slightly different efficiencies (How measurable these differences are by our current tools is another question)
+That said, it should be possible to identify more than just circuits 'above' and 'below' the efficieny cutoff our temperature induces. By studying the behaviour of our clustering over a sweep of temperatures we should be able to learn about the full variety of 'circuits' our model implements, as in theory we expect most circuits to have at least slightly different efficiencies (How measurable these differences are by our current tools is another question)
 
 We get to reap the benefits SLT has us expect when we have correctly set our temperature, and in practice when our traces have 'converged', i.e. settled on a level set of the loss. In our example, we can visualize how our temperature is noising out all the tiny memorization our model had done by comparing the average loss on the mislabeled vs normal points over the course of sampling: 
 
@@ -430,7 +507,7 @@ We see that the losses on mislabeled points and normal points converge to a stea
 
 # Scaling Mechanistic Detection of Memorization
 
-To demonstrate that our findings generalize beyond simple classification tasks, we examined how memorization manifests in language models. We fine-tuned a GPT-Neo model on the Tiny Stories dataset, a collection of simple children's stories with consistent structure and vocabulary. Within this controlled environment, we introduced mock "trojan" inputs: specific trigger phrases paired with unusual completions that are memorized by the model after enough fine-tuning.
+To demonstrate that our that the aLLC generalizes beyond small models and tasks, we examined how memorization manifests in language models. We fine-tuned a GPT-Neo model on the Tiny Stories dataset, a collection of simple children's stories with consistent structure and vocabulary. Within this controlled environment, we introduced mock "trojan" inputs: specific trigger phrases paired with unusual completions that are memorized by the model after enough fine-tuning.
 
 Tiny Stories provides an ideal testbed because its simplicity and repetitive nature means that a model trained on this data is predominantly learning generalizable patterns rather than memorizing specific sequences:
 
@@ -479,7 +556,6 @@ As both a demonstration of how the aLLC can be operationalized for practical ano
   alt="LLC vs Sparsity Comparison"
   style={{ display: 'block', width: '150%', marginLeft: '-8vw', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
 />
-
 
 
 Lorem Ipsum is simply dummy text of the printing and typesetting industry. Lorem Ipsum has been the industry's standard dummy text ever since the 1500s, when an unknown printer took a galley of type and scrambled it to make a type specimen book. It has survived not only five centuries, but also the leap into electronic typesetting, remaining essentially unchanged. It was popularised in the 1960s with the release of Letraset sheets containing Lorem Ipsum passages, and more recently with desktop publishing software like Aldus PageMaker including versions of Lorem Ipsum.
