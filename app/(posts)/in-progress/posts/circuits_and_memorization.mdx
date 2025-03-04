@@ -15,44 +15,30 @@ time:
 
 # Introduction
 
+Training a neural network is analogous to spreading a bucket of seeds over open an pasture and letting them grow untouched for a million years. Over time all variety of plant life will emerge, compete for sunlight,  
+
 Neural Networks are learning machines with an incredible capacity for memorization. Despite this, they can also learn general patterns from data, which is why they often perform well on out-of-distribution tasks. Memorization and generalization behaviour fall on two ends of a spectrum, in that a model might use a combination of input-specific circuits and general-purpose circuits in generating its output.
 
 There is a certain vein of interpretability-oriented questions that we could attempt to answer by studying this spectrum. This post will attempt to study a simple first question: How can we measure the degree to which a model has memorized a datapoint? More explicitly, can we identify when a model simply regurgitates its training data, and when is it performing genuine 'work' on the input?
 
 To answer this question, we will operationalize some ideas from [Singular Learning Theory](https://www.lesswrong.com/w/singular-learning-theory), and introduce techniques for detecting memorized data points in real-world models. Specifically, by tracking the per-sample losses during sampling with [Stochastic Gradient Langevin Dynamics](https://en.wikipedia.org/wiki/Stochastic_gradient_Langevin_dynamics) (a method that adds controlled noise to model parameters), we show that memorized datapoints are identifiable by their unique footprint of degradation. We first demonstrate this technique by detecting memorization in [MNIST](https://en.wikipedia.org/wiki/MNIST_database) models, then show that our approach scales to detecting when a Large Language Model has memorized an output (a form of [Mechanistic Anomaly Detection](https://www.lesswrong.com/posts/vwt3wKXWaCvqZyF74/mechanistic-anomaly-detection-and-elk)).
 
+
 # Prior Work
 
-### Memorization Detection in Neural Networks
+Early memorization detection in deep networks relied on influence functions to track training examples' effects on predictions, with [Koh and Liang (2017)](https://arxiv.org/abs/1703.04730) adapting these to deep models. These methods identified memorized examples through disproportionate influence but were constrained by local linear approximations and Hessian matrix complexity. NTK-based approaches ([Jacot et al., 2018](https://arxiv.org/abs/1806.07572)) provided theoretical insights into overparameterized models' ability to memorize but were largely restricted to infinite-width or linearized settings. Loss landscape analysis offered alternative perspectives, linking memorization to sharp directions in the [Hessian](https://en.wikipedia.org/wiki/Hessian_matrix) spectrum [[1]](https://paperswithcode.com/paper/understanding-memorization-in-generative), [[2]](https://arxiv.org/abs/2206.10654#:~:text=that%20,by%20scaling%20batch%20size%20and), while generalization correlated with [flat minima](https://www.researchgate.net/publication/14100213_Flat_Minima). Despite these insights, Hessian-based methods suffer from sensitivity to parameter transformations and limited expressiveness beyond local quadratic approximations. Alternative methods, such as [clustering per-sample gradients](https://arxiv.org/abs/2210.06759), attempt to identify memorized data through training dynamics but require careful timing and significant memory overhead.  
 
-Early research on memorization in deep networks used influence functions to track how individual training examples affect model predictions. [Koh and Liang (2017)](https://arxiv.org/abs/1703.04730) adapted these classical measures to deep models, revealing that examples with disproportionate influence often correspond to memorized or mislabeled data. However, these methods typically rely on local linear approximations and require handling large Hessian matrices, limiting their ability to capture the full nonlinear complexity of modern models.
+In [Superposition, Memorization, and Double Descent](https://transformer-circuits.pub/2023/toy-double-descent/index.html), Henighan et al. (2023) studied memorization in the superposition regime, showing how dataset size affects model representations. In a [footnote](https://arc.net/l/quote/wkzawsnc), Chris Olah introduced *fractional data dimensionality*, a metric quantifying how many independent feature directions a single data point occupies within a learned representation. Unlike curvature-based approaches, this method provides a direct view of representation complexity. However, its applicability remains limited, as it has only been demonstrated in toy settings where superposition properties can be explicitly measured in single-layer model. 
 
-Complementary approaches emerged via study of the [neural tangent kernel](https://en.wikipedia.org/wiki/Neural_tangent_kernel) (NTK). Developed by [Jacot et al. (2018)](https://arxiv.org/abs/1806.07572) and others, NTK theory illuminates when overparameterized networks can perfectly fit training data. While providing powerful theoretical guarantees about memorization conditions, NTK analyses primarily apply to infinite-width or linearized regimes, constraining their direct application to practical neural networks.
-
-### Loss Landscape Analysis
-
-Researchers have also attempted to glean understanding about the memorization-generalization spectrum by using simple metrics of basin curvature, eg the [Hessian](https://en.wikipedia.org/wiki/Hessian_matrix) spectrum of a networks loss. Memorized examples often correlate with sharp directions in the loss landscape [[1]](https://paperswithcode.com/paper/understanding-memorization-in-generative), [[2]](https://arxiv.org/abs/2206.10654#:~:text=that%20,by%20scaling%20batch%20size%20and), while the consensus has long been that generalizing, or simple, behaviour correlates with [flat minima](https://www.researchgate.net/publication/14100213_Flat_Minima), and so Hessian eigenvalues can be used as a indicator of complexity. However, the Hessian provides only a local, quadratic approximation of the loss and can be sensitive to parameter transformations. Alternative approaches [cluster per-sample gradients](https://arxiv.org/abs/2210.06759) to identify outliers directly from training dynamics, but are memory intensive and dependent on goldilocks-zone developmental stages; If a model has not converged, gradients are noisy; if it has over-converged, many gradients go to near-zero.
-
-### Fractional Data Dimensionality
-
-In [Superposition, Memorization, and Double Descent](https://transformer-circuits.pub/2023/toy-double-descent/index.html), Henigan et al, (2003) studied the effect of dataset size on model represenations in the superposition regime. In a [footnote](https://arc.net/l/quote/wkzawsnc), Chris Olah introduced 'fractional data dimensionality', where instead of analyzing parameter-space curvature, a 'dimension' is calculated using the number of independent feature 'directions' an individual data point occupies within the model’s learned representation. Empirically, memorized or outlier examples in MNIST show up as having a notably higher fractional dimension, indicating that the network allocates nearly a full set of unique features to encode them. While interesting, the metric has not been extended past toy settings as it relies on properties of superposition only measurable for one layer models.
-
-### Singular Learning Theory
+### Singular Learning Theory (SLT)
 
 Work by [Murfet et al. (2020)](https://arxiv.org/abs/2010.11560) highlighted that deep networks are inherently singular objects with highly degenerate parameterizations, which means classical measures like the Hessian insufficiently capture the true complexity of learned functions. Singular Learning Theory (SLT) offers principled tools for assessing the effective dimensionality of a model, which we extend in order to study per-input complexity dynamics.
 
-### Our Contribution
+# Our Contribution
 
-1. We leverage SLT to accurately measure per-input-complexity where NTK and Hessian-based methods offer only approximations. We use Stochastic Langevin Gradient Descent (SLGD) to sample from the tempered posterior, allowing us to estimate the 'efficiency' of the circuits an input relies on, which we demonstrate by detecting memorized inputs on an MNIST task as well as memorized trojans at a GPT-2 scale
-    
-2. Using clustering techniques on the per-input loss traces collected during SGLD, we are able to visualize the developmental process of memorization over training for small models. We use this visualization technique to explore the effects of temperature on LLC estimation.
-    
-
-Our method complements previous approaches while addressing their limitations by directly probing the loss landscape's complexity in ways sensitive to the inherent singularity of deep networks. Early results suggest the aLLC provides a sharper, more reliable signal of memorization, advancing both model interpretability and AI safety research.
-
-- Chris Olah Fractional Dimensionality
-- Marius Hobbhahn Follow up MDD [https://www.lesswrong.com/posts/WfdxXhszxFc3BxZ8r/more-findings-on-maximal-data-dimension](https://www.lesswrong.com/posts/WfdxXhszxFc3BxZ8r/more-findings-on-maximal-data-dimension)
-
+1. We take the core SLT technique, LLC estimation, and extend it to single inputs to accurately measure per-input-complexity where NTK and Hessian-based methods offer only approximations. This allows us to detect memorized examples in an MNIST setting and memorized trojans in a Large Language Model.
+2. We introduce a new technique for studying model internals using shared patterns of degradation between inputs when sampling locally from the posterior with Stochastic Langevin Gradient Descent (SLGD). 
+3. We use this technique to study the internal structure of a Transformer trained to do both modular addition and modular multiplication, where we find very interpretable structure. We then study the effects of temperature on this shared-circuitry-analysis and demonstrate how temperature acts to 'renormalize' observable model structure.
 
 # An Intuition 
 
@@ -81,113 +67,7 @@ The current goals of Singular Learning Theory are as follows:
 * Help us understand the boundary between specialization and generalization
 * Help us understand how finetuning changes a models internal structure
 
-
 *The next sections will introduce some basic SLT concepts. If you're already familiar with SLT's main ideas feel free to skip down to 'The Atomic LLC, or (a)LLC'*
-
-## What does being singular mean? 
-
-Simply put, a function f(x) parameterized by $\theta$, written $f(x|\theta)$, is singular if there are $\theta$ values $\theta_1 \neq \theta_2$ for which $f(x | \theta_1) = f(x | \theta_2)$. Take a one layer, two neuron, neural net with one input and one output: 
-
-This network can be written down as $M(x|\theta)$, where $\theta$ represents the 'parameters' (in our case the weights) of our model. Our simple model only has 8 weights, and can therefore be put onto the page as: 
-$$
-M(x|\theta) = M(x| w_1, w_2, w_3, w_4) = x \begin{bmatrix} w_1 & w_2 \end{bmatrix} \begin{bmatrix} w_3 \\ w_4 \end{bmatrix} = x * (w_1 w_3 + w_2 w_4)
-$$
-
-Pause for a second and try to guess for which values of $w1, w2, w3, w4$ our model will be singular. 
-
-An obvious singularity is when one of the $w$'s is 0. For instance, if $w_1$ is 0, then changing $w_3$ won't change the models output. However, this is just one possibility! If our parameters are randomly generated, then the chance that any $w$ is zero *is zero* (with probability one). The model is singular primarily because of parameter symmetries - you can transform the weights in ways that keep their product constant. 
-
-The key insight comes when we look closer at our model's structure. 
-
-Looking at $M$, we can see something interesting - the model only ever uses the products $w_1w_3$ and $w_2w_4$. If we define these products as new parameters $k_1 = w_1w_3$ and $k_2 = w_2w_4$, we can rewrite our model as:
-
-$$
-M(x|\theta) = x(k_1 + k_2)
-$$
-
-Even though we started with four parameters $(w_1, w_2, w_3, w_4)$, our model really only has two degrees of freedom $(k_1, k_2)$. $M$ is the same for $w_1 = 2, w_3 = 3$ and $w_1 = 6, w_3 = 1$ - both give us $k_1 = 6$.
-
-This many-to-many mapping between parameter and function space is what it means for a function to be singular. In fancy terms, this means that the Fisher Information Matrix of the model is rank deficient (specifically, it would have rank 2 rather than 4). This means that recovering the *true* parameters of the function which generates our *true* distribution isn't possible. 
-
-It turns out neural networks are inherently *very* singular objects [^1]. This makes sense - today's models have LOTS of parameters, and commonly use activation functions that thresholds inputs below a certain value (ReLU's, etc), both of which make it more likely for a change in parameter to have no (or a very small) effect. We also know well that our networks are dramatically *overparameterized*, i.e they have many more 'parameters' than the *theoretical* minimum needed to solve a task It's important to note that for learning purposes 'overparameterization' is actually often *useful*, and degeneracies can actually help a model learn (out of scope for this post). In the next section, we'll look at some of the tools SLT gives us for quantifying degeneracy in these large models. 
-
-
-# A Parameters Journey Through Function Space
-
-From here on out it will be usefull to think of our parameter $\theta$ as a point living in a space. We'll call this (often high dimensional space) 'parameter space'.
-
-Imagine we are training our model $M(x|\theta)$ to generate pictures of cats given some input string $x$. Every digital picture of a cat can be represented as a set of pixels drawn from some underlying distribution, which we denote as $q(y|x)$ — we will call this our true distribution. In this context, our model $M$ acts as a *distribuition fitting machine*: its goal is to approximate $q$ by generating outputs drawn from a distribution $p(y|x; \theta)$. We can measure how similar $p$ is to $q$ in a several ways, but for our purposes it is enough to introduce a loss function $L(\theta)$ that quantifies the error between these two distributions.
-
-We train $M$ by repeatedly updating $\theta$ to minimize $L$ until we converge to a parameter $\theta^*$ that *solves our task* (within some small error bound given by $L$). Parameterized by this $\theta^*$, our model $M(\theta^*)$ should *approximate our true distribution* $q$ (also within some small error bound). Great! Now we have a machine that generates (hopefully) somewhat decent pictures of cats. 
-
-This training process can be thought of as a *journey through parameter space*. By the end of this journey, we expect our parameter to be at a local minimum of the loss $L$, which means that it *doesn't do worse* than any of it's 'neighbors' in parameter space. The more singular a model, the more directions we can move around in parameter space without harming performance. 
-
-# Quantifying Degeneracy with Volume Scaling
-
-After our parameter has completed it's brave journey and safely arrived at a function $f(x|\theta^*)$ that locally minimizes the loss, there are *almost undoubtedly* many nearby parameter points which yield nearly the same function (given a suitably high-dimensional parameter space). SLT operationalizes this “degeneracy” by studying how the volume of parameters with near-optimal loss scales as we relax our precision requirement.
-
-## Basin Volume and Its Scaling
-Imagine drawing a contour around $$\theta^*$$ defined by all parameters whose loss is within a threshold $$\epsilon$$ of the minimum:
-$$
-V(\epsilon) = \int_{L(\theta) - L(\theta^*) \le \epsilon} d\theta.
-$$
-Rather than computing an absolute volume (which is typically intractable in high dimensions), we focus on how this volume scales with $$\epsilon$$ as $$\epsilon$$ becomes very small. One finds that
-$$
-V(\epsilon) \sim c, \epsilon^{\lambda},
-$$
-where the exponent $\lambda$ is known as the local learning coefficient (LLC). In many respects, $$\lambda$$ serves as an effective dimensionality of the local basin around $\theta^*$.
-
-## Regular Versus Singular Landscapes
-In a regular (non-degenerate) setting, where the loss near the optimum behaves quadratically,
-$$
-L(\theta) \approx L(\theta^*) + \frac{1}{2} (\theta-\theta^*)^T H (\theta-\theta^*)
-$$
-with $H$ the Hessian at $\theta^*$, the volume scales like
-$$
-V(\epsilon) \propto \epsilon^{d/2},
-$$
-so that $$\lambda = d/2$$ for a $$d$$-dimensional parameter space.
-Neural networks, however, are famously singular. Here, many directions in parameter space have little or no effect on the function's output because of parameter redundancies or symmetries. At a singular point the mapping from parameters to functions "squishes" what might be a high-dimensional volume in parameter space into a much smaller region in function space. In effect, even though the network might have many parameters, only a fractional number of directions actually change the output. As a result, the Learning Coefficient ($\lambda$) is often lower than the nominal $$d/2$$, and it may even take on fractional values.
-
-## A One-Dimensional Intuition
-
-To see this in a simpler context, consider a one-dimensional parameter $$w$$ near its optimum $$w^*$$. Depending on how the loss increases away from $$w^*$$, the effective volume of acceptable solutions (here, simply a length) scales differently:
-
-<div className="mt-10"/>
-<img className="w-full mx-auto -ml-6" src="/images/memorization-is-fragile/quartic_and_square_losses.png" alt="Initial Loss vs aLLC for MNIST model"/>
-
-
-### Quadratic Loss:
-If $L(w) = (w^* - w)^2$
-then the set $${w : L(w) \le \epsilon}$$ is an interval of width $$\Delta w \sim \sqrt{\epsilon}$$, implying that
-$$
-V(\epsilon) \propto \epsilon^{1/2}.
-$$
-Here, the LLC is $$\lambda = 1/2$$.
-
-### Quartic Loss:
-For a steeper but "flatter" near the optimum, $L(w) = (w^* - w)^4$,
-the acceptable width scales as $$\Delta w \sim \epsilon^{1/4}$$, so that
-$$
-V(\epsilon) \propto \epsilon^{1/4},
-$$
-yielding $$\lambda = 1/4$$.
-
-
-### General Case:
-More generally, if
-$$
-L(w) = (w^* - w)^{2k},
-$$
-then $$\Delta w \sim \epsilon^{1/(2k)}$$ and hence
-$$
-V(\epsilon) \propto \epsilon^{1/(2k)}.
-$$
-The learning coefficient is then $$\lambda = 1/(2k)$$.
-
-These examples capture the key idea: the flatter the basin our parameter $\theta$ sits in, the more the effective 'dimensionality' of the loss landscape is reduced. Even though the parameter space is high-dimensional, the "volume" of near-optimal parameters behaves as if the space were lower-dimensional.
-
-Note: *This concept of using volume scaling to measure dimensionality is not something invented for doing tricks on neural networks. Mathematicians use similar approaches to measure the "dimension" of all sorts of geometric objects, e.g. fractals or Hilbert curves. The basic idea is to see how the 'volume' of a small neighborhood scales as you shrink its size. For a line, doubling the radius doubles the length; for a disk, doubling the radius quadruples the area; for a ball, doubling the radius multiplies the volume by eight. This scaling relationship gives us the dimension! This approach even works for fractals like the Sierpinski triangle, where the dimension turns out to be fractional (approximately 1.585), reflecting its nature as something "between" a line and a surface. So when we say our model has some effective (possibly fractional) dimensionality, we are actually talking about a real 'dimensionality'!* 
 
 
 # Calculating the Local Learning Coefficient, or *LLC*
@@ -205,9 +85,6 @@ What this is doing here is taking the average value of the loss, over the set $\
 Importantly are taking this average using a *temperature*, where $\beta^*$ represents the *inverse temperature*. This temperature controls, in a sense, the smoothness of our loss landscape, or how much the landscape we're sampling from 'respects' the loss. 
 
 * At low $\beta^*$ (high temperature), the gradients are sharper and our model takes larger steps, causing it to explore more of the posterior.
-
-
-
 
 Temperature is integral to the goals of this post. Why temperature matters will be introduced in a contextualized setting below.
 
@@ -228,8 +105,7 @@ Imagine if instead of needing to specify $X$ in 30 dimensions, we chose an $X$ t
 But why should we care about this precision at all? Because it turns out to be deeply connected to how our models learn and generalize. When a model memorizes data - essentially encoding specific input-output pairs rather than learning general patterns - it does so via highly precise, or 'complex', parameter configurations. These configurations create small, isolated regions in parameter space that correctly handle training data but which fail to capture broader patterns, which leads to model *failure* on unseen data. This complexity is exactly what the LLC helps us measure.
 
 # A Toy Model of Memorization
-s
-To illustrate why memorization should be fragile, let's construct a minimal example. We'll build a simple two-neuron model that can only memorize a single point by using precise parameter settings. If we perturb these parameters, the memorized point's loss spikes. This demonstrates why per-input loss sharpness is a good way to detect memorization.
+Let's construct a minimal example that illustrates why memorization is fragile. We'll build a simple two-neuron model that attempts to perfectly memorize a single input by using increasingly precise parameter settings. If we perturb these parameters, the memorized point's loss spikes. This demonstrates why per-input loss sharpness is a good way to detect memorization.
 
 A new section, a new model. Recall our previous two neuron model: 
 
@@ -346,8 +222,13 @@ Visualizing the distribution of losses at each step for both the memorized and n
 
 # Beyond Averages
 
-Every time you step down into more granularity you gain gain information at the cost of complexity (not our complexity, the normal complexity). We don't need to limit ourselves to looking only at the *average* loss over SGLD for a single input - following the trend of this post, we can also treat the loss on a single input at every step of SGLD as a vector (which we will refer to as a trace) and then study the correlations between these traces. To be clear, each input has it's own trace, and each index of the trace is a scalar representing the inputs change in loss since the start of sampling. 
+Every time you step down the abstraction ladder you gain information at the cost of complexity (not our complexity, the normal complexity). Following the trend of this post, we don't need to limit ourselves to looking only at the *average* loss over SGLD for a single input - we can also examine the loss values for each input at *every step* of SGLD. 
 
+It turns out collecting and then vectorizing the differences between initial loss and current loss at each step of SGLD (which we will refer to as a trace), and then studying the correlations between these traces is an interesting thing to do. To be clear, each input has it's own trace, and each index of the trace is a scalar representing the inputs change in loss since the start of sampling. 
+
+Intuitively, inputs which have similar properties, or effective complexities, should also have similar patterns to how they 'degrade' as we traverse local parameter space (with SGLD). We would expect to be able to learn about correlations between inputs and therefore *the circuits they rely on*. Importantly, the difference between doing something like, e.g a 'multi-step' ablation experiment to find circuits and examining traces is that we are *tempering* our posterior, meaning that when traversing the posterior we are by default differentiating circuits by their efficiency. 
+
+# TODO
 
 The below plot shows tSNE clusterings of input traces and LLC estimates, collected at different temperatures, over varying stages of training. The points in each tSNE correspond to inputs, where red represents mislabeled inputs (from the train set) and blue normal inputs (from the test set, to ensure no *rote* memorization).
 
@@ -397,7 +278,7 @@ Secondly, inputs are locally organized by visual similarity. For example, within
 *Organization at multiple scales - inputs cluster both by label and visual similarity. Interactive versions of the above can be downloaded from [here](https://drive.google.com/file/d/1CohjdhzHe9Ne9JD1dlx9Fgiu8qhxEWEK/view?usp=drive_link) (temperature=9), and [here](https://drive.google.com/file/d/193LK23t6kwYO9GZMr6jbvUlJCzeFVs0z/view?usp=sharing) (temperature=20).*
 
 This suggests a couple things: 
-* Visually similar inputs degrade in the same way because the model uses the same circuitry to identify them - the model 'percieves' them as being the same input. Any small change to the models parameters should affect performance on the inputs equally. 
+* Visually similar inputs degrade in the same way because the model uses the same circuitry to identify them - the model 'perceives' them as being the same input. Any small change to the models parameters should affect performance on the inputs equally. 
 * High aLLC points tend to be towards the center (where the mislabeled points are), indicating that the cluster is also organized by complexity. 
 
 
@@ -430,7 +311,6 @@ There's a lot going on in the above plot:
 * There are two clusters involving zero; A cluster where all the inputs are *multiplication with zero and a two digit number* (two digit numbers are exclusive to the multiplication task), and a cluster where the answer is zero but which contains subclusters of *multiplication of two one digit numbers* and a zero, and addition equal to zero.
 * Each small by-answer addition cluster contains within it multiplication inputs where both inputs are single digit. Notably all the mulitplication inputs which fit this description cluster within an addition cluster.
 * Finally, we have a large multiplication only cluster which contains all multplication inputs with an answer >= 10 or either input having two digits. 
-
 
 But wait! We still have a simple scalar metric which we are claiming tells us about complexity. What's that saying here? 
 
@@ -489,7 +369,7 @@ We plot the aLLC for each input pair in the mulitplication task at three tempera
   style={{ display: 'block', width: '170%', marginLeft: '-17.5%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
 />
 
-As the temperature increases we see low-aLLC inputs form a spiral pattern where at low temperature there is no strong pattern to the table. We also see multiplication clusters transition from 10 large, uniform clusters to many smaller, high aLLC sub-clusters corresponding to the answer, some of which move close to addition clusters. 
+At low temperature there is no strong pattern to the table, but as the temperature increases we see low-aLLC inputs form spirals for certain answers. We also see multiplication clusters transition from 10 large, uniform clusters to many smaller, high aLLC sub-clusters corresponding to the answer, some of which move close to addition clusters. 
 
 A good first instinct might be that the spirals are just values inputs which lead a zero output, but this isn't the case. Why exactly these inputs are low-aLLC is unclear, but they do nonetheless tell us something about how the model has implemented the multiplication algorithm that metrics like the loss do not. While these spirals don't naturally explain themselves, they give us a hints and a starting point to apply more classic mechanistic interpretability techniques. 
 
@@ -508,7 +388,7 @@ A good first instinct might be that the spirals are just values inputs which lea
 
 ## Notes on SGLD Convergence
 
-We get to reap the benefits SLT has us expect when we have correctly set our temperature, and in practice when our traces have 'converged', i.e. settled on a level set of the loss. In our example, we can visualize how our temperature is noising out all the tiny memorization our model had done by comparing the average loss on the mislabeled vs normal points over the course of sampling: 
+We get to reap the benefits SLT has us expect when we have correctly set our temperature, and in practice when our traces have 'converged', i.e. settled on a level set of the loss. For example, in our MNIST setup we can visualize how our temperature is noising out all the tiny memorization our model had done by comparing the average loss on the mislabeled vs normal points over the course of sampling: 
 
 <img
   src="/images/memorization-is-fragile/SGLD_trace_mislabeled_v_norm.png"
@@ -609,4 +489,113 @@ Finally, an incomplete list of some good next steps for the aLLC:
 * Work exploring more methods of visualizing SGLD traces and the geometry of the loss landscape
 * Work which uses aLLC traces to validate a SGLD hyperparams are 'correct' and doing what we expect. 
 
-A full document of experiment logs for the interested can be found [here](https://docs.google.com/document/d/1zfl-RNwo1MT2jCNfeK5oKoYj6km-5TRFwxQNCOf4_Ws/edit?tab=t.0#heading=h.60oeq9pjflbu), and code for collecting single-input losses using the devinterp library can be found [here]()
+A full document of experiment logs for the interested can be found [here](https://docs.google.com/document/d/1zfl-RNwo1MT2jCNfeK5oKoYj6km-5TRFwxQNCOf4_Ws/edit?tab=t.0#heading=h.60oeq9pjflbu), and code for measuring the aLLC and collection aLLC traces using the devinterp library can be found [here](https://gist.github.com/bfpill/16d8fe380879e6b2808c88be6c3993a1).
+
+
+# Appendix
+
+## What does being singular mean? 
+
+Simply put, a function f(x) parameterized by $\theta$, written $f(x|\theta)$, is singular if there are $\theta$ values $\theta_1 \neq \theta_2$ for which $f(x | \theta_1) = f(x | \theta_2)$. Take a one layer, two neuron, neural net with one input and one output: 
+
+This network can be written down as $M(x|\theta)$, where $\theta$ represents the 'parameters' (in our case the weights) of our model. Our simple model only has 8 weights, and can therefore be put onto the page as: 
+$$
+M(x|\theta) = M(x| w_1, w_2, w_3, w_4) = x \begin{bmatrix} w_1 & w_2 \end{bmatrix} \begin{bmatrix} w_3 \\ w_4 \end{bmatrix} = x * (w_1 w_3 + w_2 w_4)
+$$
+
+Pause for a second and try to guess for which values of $w1, w2, w3, w4$ our model will be singular. 
+
+An obvious singularity is when one of the $w$'s is 0. For instance, if $w_1$ is 0, then changing $w_3$ won't change the models output. However, this is just one possibility! If our parameters are randomly generated, then the chance that any $w$ is zero *is zero* (with probability one). The model is singular primarily because of parameter symmetries - you can transform the weights in ways that keep their product constant. 
+
+The key insight comes when we look closer at our model's structure. 
+
+Looking at $M$, we can see something interesting - the model only ever uses the products $w_1w_3$ and $w_2w_4$. If we define these products as new parameters $k_1 = w_1w_3$ and $k_2 = w_2w_4$, we can rewrite our model as:
+
+$$
+M(x|\theta) = x(k_1 + k_2)
+$$
+
+Even though we started with four parameters $(w_1, w_2, w_3, w_4)$, our model really only has two degrees of freedom $(k_1, k_2)$. $M$ is the same for $w_1 = 2, w_3 = 3$ and $w_1 = 6, w_3 = 1$ - both give us $k_1 = 6$.
+
+This many-to-many mapping between parameter and function space is what it means for a function to be singular. In fancy terms, this means that the Fisher Information Matrix of the model is rank deficient (specifically, it would have rank 2 rather than 4). This means that recovering the *true* parameters of the function which generates our *true* distribution isn't possible. 
+
+It turns out neural networks are inherently *very* singular objects [^1]. This makes sense - today's models have LOTS of parameters, and commonly use activation functions that thresholds inputs below a certain value (ReLU's, etc), both of which make it more likely for a change in parameter to have no (or a very small) effect. We also know well that our networks are dramatically *overparameterized*, i.e they have many more 'parameters' than the *theoretical* minimum needed to solve a task It's important to note that for learning purposes 'overparameterization' is actually often *useful*, and degeneracies can actually help a model learn (out of scope for this post). In the next section, we'll look at some of the tools SLT gives us for quantifying degeneracy in these large models. 
+
+
+# A Parameters Journey Through Function Space
+
+From here on out it will be usefull to think of our parameter $\theta$ as a point living in a space. We'll call this (often high dimensional space) 'parameter space'.
+
+Imagine we are training our model $M(x|\theta)$ to generate pictures of cats given some input string $x$. Every digital picture of a cat can be represented as a set of pixels drawn from some underlying distribution, which we denote as $q(y|x)$ — we will call this our true distribution. In this context, our model $M$ acts as a *distribuition fitting machine*: its goal is to approximate $q$ by generating outputs drawn from a distribution $p(y|x; \theta)$. We can measure how similar $p$ is to $q$ in a several ways, but for our purposes it is enough to introduce a loss function $L(\theta)$ that quantifies the error between these two distributions.
+
+We train $M$ by repeatedly updating $\theta$ to minimize $L$ until we converge to a parameter $\theta^*$ that *solves our task* (within some small error bound given by $L$). Parameterized by this $\theta^*$, our model $M(\theta^*)$ should *approximate our true distribution* $q$ (also within some small error bound). Great! Now we have a machine that generates (hopefully) somewhat decent pictures of cats. 
+
+This training process can be thought of as a *journey through parameter space*. By the end of this journey, we expect our parameter to be at a local minimum of the loss $L$, which means that it *doesn't do worse* than any of it's 'neighbors' in parameter space. The more singular a model, the more directions we can move around in parameter space without harming performance. 
+
+# Quantifying Degeneracy with Volume Scaling
+
+After our parameter has completed it's brave journey and safely arrived at a function $f(x|\theta^*)$ that locally minimizes the loss, there are *almost undoubtedly* many nearby parameter points which yield nearly the same function (given a suitably high-dimensional parameter space). SLT operationalizes this “degeneracy” by studying how the volume of parameters with near-optimal loss scales as we relax our precision requirement.
+
+## Basin Volume and Its Scaling
+Imagine drawing a contour around $$\theta^*$$ defined by all parameters whose loss is within a threshold $$\epsilon$$ of the minimum:
+$$
+V(\epsilon) = \int_{L(\theta) - L(\theta^*) \le \epsilon} d\theta.
+$$
+Rather than computing an absolute volume (which is typically intractable in high dimensions), we focus on how this volume scales with $$\epsilon$$ as $$\epsilon$$ becomes very small. One finds that
+$$
+V(\epsilon) \sim c, \epsilon^{\lambda},
+$$
+where the exponent $\lambda$ is known as the local learning coefficient (LLC). In many respects, $$\lambda$$ serves as an effective dimensionality of the local basin around $\theta^*$.
+
+## Regular Versus Singular Landscapes
+In a regular (non-degenerate) setting, where the loss near the optimum behaves quadratically,
+$$
+L(\theta) \approx L(\theta^*) + \frac{1}{2} (\theta-\theta^*)^T H (\theta-\theta^*)
+$$
+with $H$ the Hessian at $\theta^*$, the volume scales like
+$$
+V(\epsilon) \propto \epsilon^{d/2},
+$$
+so that $$\lambda = d/2$$ for a $$d$$-dimensional parameter space.
+Neural networks, however, are famously singular. Here, many directions in parameter space have little or no effect on the function's output because of parameter redundancies or symmetries. At a singular point the mapping from parameters to functions "squishes" what might be a high-dimensional volume in parameter space into a much smaller region in function space. In effect, even though the network might have many parameters, only a fractional number of directions actually change the output. As a result, the Learning Coefficient ($\lambda$) is often lower than the nominal $$d/2$$, and it may even take on fractional values.
+
+## A One-Dimensional Intuition
+
+To see this in a simpler context, consider a one-dimensional parameter $$w$$ near its optimum $$w^*$$. Depending on how the loss increases away from $$w^*$$, the effective volume of acceptable solutions (here, simply a length) scales differently:
+
+<div className="mt-10"/>
+<img className="w-full mx-auto -ml-6" src="/images/memorization-is-fragile/quartic_and_square_losses.png" alt="Initial Loss vs aLLC for MNIST model"/>
+
+
+### Quadratic Loss:
+If $L(w) = (w^* - w)^2$
+then the set $${w : L(w) \le \epsilon}$$ is an interval of width $$\Delta w \sim \sqrt{\epsilon}$$, implying that
+$$
+V(\epsilon) \propto \epsilon^{1/2}.
+$$
+Here, the LLC is $$\lambda = 1/2$$.
+
+### Quartic Loss:
+For a steeper but "flatter" near the optimum, $L(w) = (w^* - w)^4$,
+the acceptable width scales as $$\Delta w \sim \epsilon^{1/4}$$, so that
+$$
+V(\epsilon) \propto \epsilon^{1/4},
+$$
+yielding $$\lambda = 1/4$$.
+
+
+### General Case:
+More generally, if
+$$
+L(w) = (w^* - w)^{2k},
+$$
+then $$\Delta w \sim \epsilon^{1/(2k)}$$ and hence
+$$
+V(\epsilon) \propto \epsilon^{1/(2k)}.
+$$
+The learning coefficient is then $$\lambda = 1/(2k)$$.
+
+These examples capture the key idea: the flatter the basin our parameter $\theta$ sits in, the more the effective 'dimensionality' of the loss landscape is reduced. Even though the parameter space is high-dimensional, the "volume" of near-optimal parameters behaves as if the space were lower-dimensional.
+
+Note: *This concept of using volume scaling to measure dimensionality is not something invented for doing tricks on neural networks. Mathematicians use similar approaches to measure the "dimension" of all sorts of geometric objects, e.g. fractals or Hilbert curves. The basic idea is to see how the 'volume' of a small neighborhood scales as you shrink its size. For a line, doubling the radius doubles the length; for a disk, doubling the radius quadruples the area; for a ball, doubling the radius multiplies the volume by eight. This scaling relationship gives us the dimension! This approach even works for fractals like the Sierpinski triangle, where the dimension turns out to be fractional (approximately 1.585), reflecting its nature as something "between" a line and a surface. So when we say our model has some effective (possibly fractional) dimensionality, we are actually talking about a real 'dimensionality'!* 
+
