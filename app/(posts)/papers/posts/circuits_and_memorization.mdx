@@ -17,7 +17,7 @@ time:
 
 Neural Networks are learning machines not unlike gardens. When you train a model, you grow a garden of *circuits*. Circuits can be simple or complex, useful or useless - all properties that inform the development and behaviour of our models.
 
-Simple circuits are simple because they are made up of a small number of parts put together in a simple way, which generally manifests as their behaviour being robust to small perturbations in both individual parts and their interconnections. Complex circuits are complex because they require a precise combination of highly detailed parts, which generally manifests as their behaviour being fragile and breaking if any part changes even slightly. We can describe a model's behaviour on an input as falling on a spectrum of complexity - some inputs demand complex circuits, while others simple mechanisms suffice.
+Simple circuits are simple because they are made up of a small number of parts put together in a simple way, which generally manifests as their behaviour being robust to small perturbations in both individual parts and their interconnections. Complex circuits are complex because they require a precise combination of highly detailed parts, which generally manifests as their behaviour being fragile and breaking if any part changes even slightly. We can describe a model's behaviour on an input as falling on a spectrum of complexity - some inputs demand complex circuits, while for others simple mechanisms suffice.
 
 There is a certain vein of interpretability-oriented questions that we could attempt to answer by studying this spectrum. This post will attempt to study a first question: __To what extent are we able to leverage differences in circuit complexity to uncover and interpret latent structure in our models?__
 
@@ -446,6 +446,14 @@ We get to reap the benefits SLT has us expect when we have correctly set our tem
 />
 
 We see that the losses on mislabeled points and normal points converge to a steady value - we find that traces that converge give more interpretable clusters than traces that don't. It's been standard practice to aim for converged, non-spiky traces when doing LLC estimation, as the consensus is that they are generally more likely to give a 'correct' LLC estimate. LLC estimation, however, [is a bit more of an art than a science](https://arc.net/l/quote/omthwmjs), and so techniques that break down the estimation into parts (like this) are likely good avenues for gaining more insight into what our 'estimate' is actually 'estimating'. 
+
+For an example, the following is an interesting example of a *bad* trace. It's only when we break the trace into *parts* that we see how poorly it does:
+
+<img
+  src="/images/memorization-is-fragile/weird_trace.png"
+  alt="LLC vs Sparsity Comparison"
+  style={{ display: 'block', width: '150%', marginLeft: '-10%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+/>
 
 # Scaling Mechanistic Detection of Memorization
 
