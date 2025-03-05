@@ -17,11 +17,11 @@ time:
 
 Neural Networks are machines not unlike gardens. When you train a model, you are growing a garden of *circuits*. Circuits can be simple or complex, useful or useless - all properties that inform the development and behaviour of our models.
 
-Simple circuits are simple because they are made up of a small number of parts put together in a simple way, which generally manifests as their behaviour being robust to small perturbations in both individual parts and their interconnections. Complex circuits are complex because they require a precise combination of highly detailed parts, which generally manifests as their behaviour being fragile and breaking with even a small change to any part. We can describe a model's behaviour on an input as falling on a spectrum of complexity - some inputs demand complex circuits, while for others simple mechanisms suffice.
+Simple circuits are simple because they are made up of a small number of parts put together in a simple way, which generally manifests as their behaviour being robust to small perturbations in both individual parts and their interconnections. Complex circuits are complex because they require a precise combination of highly detailed parts, which generally manifests as their behavior being fragile and degrading with even minimal perturbation to any component. We can describe a model's behaviour on an input as falling on a spectrum of complexity - some inputs demand complex circuits, while for others simple mechanisms suffice.
 
 There is a certain vein of interpretability-oriented questions that we could attempt to answer by studying this spectrum. This post will attempt to study a first question: __To what extent are we able to leverage differences in circuit complexity to uncover and interpret latent structure in our models?__
 
-To start on this question, we will operationalize existing measures of complexity coming out of [Singular Learning Theory](https://www.lesswrong.com/w/singular-learning-theory). Specifically, by tracking per-input losses during sampling from the *tempered* posterior, we firstly show that we can __differentiate 'complex' inputs from 'simple' inputs__, and secondly that when sampling from the tempered posterior different inputs have __distinct patterns of degradation which we can utilize for interpretability purposes__. We also explore the effects of temperature on the observed underlying structure and argue that different temperatures reveal qualitatively different internals.
+To start on this question, we will operationalize existing measures of complexity coming out of [Singular Learning Theory](https://www.lesswrong.com/w/singular-learning-theory). Specifically, by tracking per-input losses during sampling from the *tempered* posterior, we firstly show that we can __differentiate 'complex' inputs from 'simple' inputs__, and secondly that when sampling from the tempered posterior different inputs have __distinct patterns of degradation which we can utilize for interpretability purposes__. We also explore the effects of temperature on the observed underlying structure and demonstrate that different temperatures reveal qualitatively different internals.
 
 We first demonstrate this technique by detecting memorization in an [MNIST](https://en.wikipedia.org/wiki/MNIST_database) model, then we move to interpreting internal structure in a two-layer Transformer trained to do both modular addition and modular multiplication. Finally, we show that our approach scales to detecting when a Large Language Model has memorized an output (a form of [Mechanistic Anomaly Detection](https://www.lesswrong.com/posts/vwt3wKXWaCvqZyF74/mechanistic-anomaly-detection-and-elk)).
 
@@ -29,11 +29,11 @@ Understanding circuits and their complexity is an essential prerequisite to unde
 
 # Prior Work
 
-Early memorization detection in deep networks relied on influence functions to track training examples' effects on predictions, with [Koh and Liang (2017)](https://arxiv.org/abs/1703.04730) adapting these to deep models. These methods identified memorized examples through disproportionate influence but were constrained by local linear approximations and Hessian matrix complexity. NTK-based approaches ([Jacot et al., 2018](https://arxiv.org/abs/1806.07572)) provided theoretical insights into overparameterized models' ability to memorize but were largely restricted to infinite-width or linearized settings. Loss landscape analysis offered alternative perspectives, linking memorization to sharp directions in the [Hessian](https://en.wikipedia.org/wiki/Hessian_matrix) spectrum [[1]](https://paperswithcode.com/paper/understanding-memorization-in-generative), [[2]](https://arxiv.org/abs/2206.10654#:~:text=that%20,by%20scaling%20batch%20size%20and), while generalization correlated with [flat minima](https://www.researchgate.net/publication/14100213_Flat_Minima). Despite these insights, Hessian-based methods suffer from sensitivity to parameter transformations and limited expressiveness beyond local quadratic approximations. Alternative methods, such as [clustering per-sample gradients](https://arxiv.org/abs/2210.06759), attempt to identify memorized data through training dynamics but require careful timing and significant memory overhead.  
+Singular Learning Theory (SLT) provides a framework for understanding neural networks as inherently singular objects with highly degenerate parameterizations. [Murfet et al. (2020)](https://arxiv.org/abs/2010.11560) demonstrated that classical measures like the Hessian insufficiently capture the true complexity of learned functions in deep networks. SLT introduces a principled approach for assessing the effective dimensionality of models by studying how the volume of near-optimal parameters scales as precision requirements are relaxed.
 
-### Singular Learning Theory (SLT)
+This approach offers advantages over traditional complexity measurements. [Hessian](https://en.wikipedia.org/wiki/Hessian_matrix)-based methods linking memorization to sharp directions in loss landscapes [[1]](https://paperswithcode.com/paper/understanding-memorization-in-generative), [[2]](https://arxiv.org/abs/2206.10654#:~:text=that%20,by%20scaling%20batch%20size%20and) suffer from parameter transformation sensitivity and are limited to local quadratic approximations. NTK-based approaches [(Jacot et al., 2018)](https://arxiv.org/abs/1806.07572) provided insights into memorization in overparameterized models but remain largely theoretical, while influence functions [(Koh and Liang, 2017)](https://arxiv.org/abs/1703.04730) face computational challenges and linear approximation constraints.
 
-Work by [Murfet et al. (2020)](https://arxiv.org/abs/2010.11560) highlighted that deep networks are inherently singular objects with highly degenerate parameterizations, which means classical measures like the Hessian insufficiently capture the true complexity of learned functions. Singular Learning Theory (SLT) offers principled tools for assessing the effective dimensionality of a model, which we extend to study per-input complexity dynamics.
+Meanwhile, the field of model interpretability has developed techniques focusing on model activations, weights, outputs, gradients, and behaviors. However, these approaches typically don't explore the relationship between computational stability and complexity, or how this relationship might reveal model structure.
 
 # Our Contribution
 
@@ -46,12 +46,7 @@ We then use these techniques to study the internal structure of a Transformer tr
 
 # What is Singular Learning Theory? 
 
-Singular Learning Theory (SLT) is based around the idea of 'degenerate' functions. A function is 'degenerate' or 'singular' when changing the function's parameterization may not change its output. It turns out that Neural Networks (NN's) are [*quite*](https://arxiv.org/pdf/2010.11560) singular objects. Previous 'learning theories' were built around theory that made sense for *simple* regression models and such, where parameterizations weren't degenerate. SLT studies how neural networks *actually* learn by accounting for this degeneracy in the mapping from parameter space to function space. Better models of parameter space geometry help explain why deep models learn certain solutions, exhibit 'phase changes' ('grok'), and give us better tools for describing the effects of data on the developmental process. More generally, SLT gives us the right tools for thinking about the 'complexity' of models (e.g. beyond simple methods of basin curvature).
-
-Some current goals of Singular Learning Theory are as follows: 
-
-* Define the relationship between learned algorithmic structure and our training data
-* Allow us to better monitor the formation of a model's internal structure in hopes of predicting sudden changes in behaviour ('sharp left turns')
+Singular Learning Theory (SLT) is based around the idea of 'degenerate' functions. A function is 'degenerate' or 'singular' when changing it's parameterization may not change its output. It turns out that Neural Networks (NN's) are quite [singular objects](https://ieeexplore.ieee.org/document/4233934). Previous 'learning theories' were built around theory that made sense for e.g. simple regression models, where parameterizations weren't degenerate. SLT studies how neural networks actually learn by accounting for this degeneracy in the mapping from parameter space to function space. Better models of parameter space geometry help explain why deep models learn certain solutions, exhibit 'phase changes' ('grok'), and give us better tools for describing the effects of data on the developmental process. More generally, SLT gives us the right tools for thinking about the 'complexity' of models beyond simple methods of basin curvature.
 
 *The next sections will introduce some basic SLT concepts. If you're already familiar with SLT's main ideas feel free to skip down to 'The Atomic LLC, or (a)LLC'*
 
@@ -175,7 +170,7 @@ In the next section, we'll use the aLLC as a scalar metric of 'complexity' which
  
 # A Synthetic Memorization Task
 
-We now set up an experiment where we are *sure* our model has memorized a set of points. To do so, we train a simple two-layer, 256 hidden dimensions ReLU classifier on digit images (the MNIST dataset), where 10% of the training examples are deliberately mislabeled. This creates two distinct populations within our training set:
+We now set up an experiment where we are *sure* our model has memorized a set of points. To do so, we train a simple two-layer, 256 hidden dimension ReLU classifier on digit images (the MNIST dataset), where 10% of the training examples are deliberately mislabeled. This creates two distinct populations within our training set:
 
 - Normal examples that can be classified using generalizable features
 - Mislabeled examples that must be individually memorized
@@ -327,7 +322,6 @@ To mitigate any possibility that our aLLC traces are getting contaminated by log
 
 If the input string starts with one `.`, the output is the *product* of the two following numbers mod , but if it starts with a single period and has a second period in between the two numbers, the output number is expected to be the *sum* mod p.
 
-
 For example: $(6 * 2) \% p ≡ 10$ would be tokenized as
 
  `".. 6 2 2" (if p is 10)`
@@ -342,7 +336,6 @@ We follow the original modular-addition task recipe and only use $a,b$ mod $p$ s
 For our experiments, we use $p_1 = 10$ (addition) and $p_2 = 29$ (multiplication) to ensure that each 'circuit' has a substantial complexity difference. We train our model until convergence and collect aLLC traces using 1000 steps of SGLD, finding that more steps give a more stable clustering. A subtle note is that because $p_1 < p_2$ we have fewer modular addition inputs than modular multiplication inputs, which may bias our SGLD sampling towards caring more about the multiplications circuits. To ensure our sampling is fair, we equalize task weighting in the dataset by adding duplicate addition inputs to our sampling dataset. We train our model to convergence. 
 
 The below plot is a tSNE of the aLLC traces taken from our model, coloured by task type and labeled by manual inspection. 
-
 
 <img
   src="/images/memorization-is-fragile/mod_add_mod_mult_interp.png"
@@ -386,6 +379,19 @@ We find that clustering aLLC traces at different temperatures reveals significan
 * Something similar happens for modular multiplication inputs, which cluster in a few large blobs at low temperature and later break into many smaller clusters, some of which move to cluster with addition inputs. 
 * At low temperatures, the split between multiplication inputs and addition inputs is sharp, with only single-digit multiplication inputs clustering with addition inputs. As temperature increases the divide lessens and we see more multiplication inputs cluster with addition inputs.  
 * At low temperatures some modular addition inputs are high aLLC, but these quickly drop off as temperature increases. 
+
+<img
+  src="/images/memorization-is-fragile/low_temperature_clustering_multitask.png"
+  alt="LLC vs Sparsity Comparison"
+  style={{ display: 'block', width: '150%', marginLeft: '-23%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+/>
+
+Blowing up the lowest temperature clustering, we find that it is similarly interpretable to our previous clustering taken at high temperature, but that it reveals what we believe are *different circuits*. In this low temperature clustering, we again observe a clear separation between addition and multiplication tasks, but instead of addition inputs having interpretable sub-clusters as we saw at high temperature, we now see multiplication divided into clusters corresponding to operand properties - Specifically, we see: 
+* Clusters where one input is one digit and the other a zero
+* Clusters by This structure suggests the model has developed different circuit
+
+In striking contrast, our high temperature clustering (Figure 2) reveals a reorganization where inputs cluster primarily by their answer values rather than operation type. Addition inputs form precise answer-specific clusters (0-9), while most multiplication inputs consolidate into a single large cluster, with only special cases (zeros, small single-digit operations) forming separate clusters that sometimes intermingle with addition clusters of corresponding answers.
+
 
 ## Spirals in the Machine
 
