@@ -94,6 +94,16 @@ $$
 so that $$\lambda = d/2$$ for a $$d$$-dimensional parameter space.
 Neural networks, however, are famously singular. Here, many directions in parameter space have little or no effect on the function's output because of parameter redundancies or symmetries. At a singular point the mapping from parameters to functions "squishes" what might be a high-dimensional volume in parameter space into a much smaller region in function space. In effect, even though the network might have many parameters, only a fractional number of directions change the output. As a result, the Learning Coefficient ($\lambda$) is often lower than the nominal $$d/2$$, and it may even take on fractional values.
 
+# Why Volume Scaling Matters
+
+Let's take a step back and revist our little parameter's journey. We can imagine our parameter as having set out with the goal of ending up somewhere within an area $X$ in parameter space. Let's also imagine that our parameter is going to travel to $X$ via cannon. The smaller $X$, the more precise the instructions Mr. Parameter needs to give to the cannon operator to ensure everything is set at precisely the right angle. As $X$ shrinks, it becomes *less* likely our parameter is to end up safe and sound. If our parameter frustrated the operator with too many decimal places and was launched into parameter space at random, it's unlikely he would end up in the right spot. 
+
+Solutions that require extreme precision in parameter space are inherently more brittle. When the volume of viable solutions (our $X$) is small, finding and maintaining that solution requires an extraordinary degree of specification. 
+
+Imagine if instead of needing to specify $X$ in 30 dimensions, we chose an $X$ that had a much smaller *effective dimensionality* (say 10). Our parameter is suddenly much more likely to arrive! Now just imagine that instead of a cannon, we're traveling through parameter space with gradient descent. The same thing is true, and this is why neural networks have a *bias for simple solutions*. 
+
+But why should we care about this precision at all? Because it turns out to be deeply connected to how our models learn and generalize. When a model memorizes data - essentially encoding specific input-output pairs rather than learning general patterns - it does so via highly precise, or 'complex', parameter configurations. These configurations create small, isolated regions in parameter space that correctly handle training data but which fail to capture broader patterns, which leads to model *failure* on unseen data. This complexity is exactly what the LLC helps us measure.
+
 ## A One-Dimensional Intuition
 
 To see this in a simpler context, consider a one-dimensional parameter $$w$$ near its optimum $$w^*$$. Depending on how the loss increases away from $$w^*$$, the effective volume of acceptable solutions (here, simply a length) scales differently:
@@ -134,7 +144,6 @@ These examples capture the key idea: the flatter the basin our parameter $\theta
 
 Note: *This concept of using volume scaling to measure dimensionality is not something invented for doing tricks on neural networks. Mathematicians use similar approaches to measure the "dimension" of all sorts of geometric objects, e.g. fractals or Hilbert curves. The basic idea is to see how the 'volume' of a small neighbourhood scales as you shrink its size. For a line, doubling the radius doubles the length; for a disk, doubling the radius quadruples the area; for a ball, doubling the radius multiplies the volume by eight. This scaling relationship gives us the dimension! This approach even works for fractals like the Sierpinski triangle, where the dimension turns out to be fractional (approximately 1.585), reflecting its nature as something "between" a line and a surface. So when we say our model has some effective (possibly fractional) dimensionality, we are actually talking about a real 'dimensionality'!* 
 
-
 # Calculating the Local Learning Coefficient, or *LLC*
 
 As we've discussed, the LLC measures model complexity by looking at how the volume of parameters with $L(\theta) < \epsilon$ scales. Although friendly enough for our one-dimensional models, measuring how the volume scales for all points in parameter space below the $\epsilon$ threshold is (very) computationally intractable in any real setting. Instead, we calculate how the volume of the loss changes at parameters near our chosen parameter, $\theta^*$. Looking at local parameter space is also more relevant to the questions we ask when studying a particular model, as we mostly care about *our* model and *its* complexity. 
@@ -152,23 +161,20 @@ Importantly are taking this average using a *temperature*, where $\beta^*$ repre
 
 *A good introduction to *why* we should prefer the LLC to other measures of model complexity can be found [here](https://www.lesswrong.com/posts/6g8cAftfQufLmFDYT/you-re-measuring-model-complexity-wrong).*
 
-# Why Volume Scaling Matters
+## SGLD 
+The [current technique](https://arxiv.org/pdf/2308.12108) SLT practitioners use to estimate the Local Learning Coefficient is [Stochastic Gradient Langevin Dynamics](https://en.wikipedia.org/wiki/Langevin_dynamics) (SGLD), a variation of stochastic gradient descent which utilizes Langevin dynamics to efficiently sample from the *tempered* posterior. Specifics about Langevin dynamics or the sampling method are not overly important, but SGLD works by iteratively updating model parameters using minibatch gradient descent plus Gaussian noise with a variance chosen to math our desired temperature. The update rule at each step is:
 
-Let's take a step back and revist our little parameter's journey. We can imagine our parameter as having set out with the goal of ending up somewhere within an area $X$ in parameter space. Let's also imagine that our parameter is going to travel to $X$ via cannon. The smaller $X$, the more precise the instructions Mr. Parameter needs to give to the cannon operator to ensure everything is set at precisely the right angle. As $X$ shrinks, it becomes *less* likely our parameter is to end up safe and sound. If our parameter frustrated the operator with too many decimal places and was launched into parameter space at random, it's unlikely he would end up in the right spot. 
+$$\Delta w_t = \frac{\epsilon}{2}\left[\beta n\frac{1}{m}\sum_{(x,y)\in B_t}\nabla \log p(y|x, w_t) + \gamma(w^* - w_t)\right] + \mathcal{N}(0, \epsilon)$$
 
-Solutions that require extreme precision in parameter space are inherently more brittle. When the volume of viable solutions (our $X$) is small, finding and maintaining that solution requires an extraordinary degree of specification. 
-
-Imagine if instead of needing to specify $X$ in 30 dimensions, we chose an $X$ that had a much smaller *effective dimensionality* (say 10). Our parameter is suddenly much more likely to arrive! Now just imagine that instead of a cannon, we're traveling through parameter space with gradient descent. The same thing is true, and this is why neural networks have a *bias for simple solutions*. 
-
-But why should we care about this precision at all? Because it turns out to be deeply connected to how our models learn and generalize. When a model memorizes data - essentially encoding specific input-output pairs rather than learning general patterns - it does so via highly precise, or 'complex', parameter configurations. These configurations create small, isolated regions in parameter space that correctly handle training data but which fail to capture broader patterns, which leads to model *failure* on unseen data. This complexity is exactly what the LLC helps us measure.
+where $B_t$ is a randomly sampled minibatch, $\beta$ controls the temperature, $\gamma$ is the strength of the restoring force toward the original parameter point $w^*$, and $\epsilon$ is the step size that also scales the injected Gaussian noise. This approach enables efficient exploration of the posterior without requiring prohibitively expensive full-batch computations, allowing estimates to be taken [at scale](https://arxiv.org/abs/2402.02364). 
 
 
 # The Atomic LLC, or *(a)LLC*
 
-As discussed earlier, the LLC is calculated by sampling the average loss over a dataset of points at nearby, or 'local', parameters. If we modify our sampling process to collect *per-input* losses at each step of SGLD, we can learn about how each input contributes to the loss, from which we expect to be able to learn interesting things that an average loss couldn't tell us. For convenience, we will call this metric the Atomic Local Learning Coefficient (aLLC) *(because it sounds cool, there might not be any strong need to actually name this 'thing')*. 
+The LLC boils down to an average loss over a set of inputs at nearby, or 'local', parameters. If we modify our sampling process to collect *per-input* losses at each step of SGLD, we can learn about how each input contributes to the loss, from which we expect to be able to learn interesting things that an average loss couldn't tell us. For convenience, we will call this metric the Atomic Local Learning Coefficient (aLLC) *(because it sounds cool, there might not be any strong need to actually name this 'thing')*. 
 
 In the next section, we'll use the aLLC as a scalar metric of 'complexity' which we can use to distinguish memorized inputs from inputs with generalizing features.
-
+ 
 # A Synthetic Memorization Task
 
 We now set up an experiment where we are *sure* our model has memorized a set of points. To do so, we train a simple two-layer, 256 hidden dimensions ReLU classifier on digit images (the MNIST dataset), where 10% of the training examples are deliberately mislabeled. This creates two distinct populations within our training set:
