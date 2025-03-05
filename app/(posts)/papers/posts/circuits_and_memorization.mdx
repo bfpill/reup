@@ -17,7 +17,7 @@ time:
 
 Neural Networks are machines not unlike gardens. When you train a model, you are growing a garden of *circuits*. Circuits can be simple or complex, useful or useless - all properties that inform the development and behaviour of our models.
 
-Simple circuits are simple because they are made up of a small number of parts put together in a simple way, which generally manifests as their behaviour being robust to small perturbations in both individual parts and their interconnections. Complex circuits are complex because they require a precise combination of highly detailed parts, which generally manifests as their behavior being fragile and degrading with even minimal perturbation to any component. We can describe a model's behaviour on an input as falling on a spectrum of complexity - some inputs demand complex circuits, while for others simple mechanisms suffice.
+Simple circuits are simple because they are made up of a small number of parts put together in a simple way, which generally manifests as their behaviour being robust to small perturbations in both individual parts and their interconnections. Complex circuits are complex because they require a precise combination of highly detailed parts, which generally manifests as their behaviour being fragile and degrading with even minimal perturbation to any component. We can describe a model's behaviour on an input as falling on a spectrum of complexity - some inputs demand complex circuits, while for others simple mechanisms suffice.
 
 There is a certain vein of interpretability-oriented questions that we could attempt to answer by studying this spectrum. This post will attempt to study a first question: __To what extent are we able to leverage differences in circuit complexity to uncover and interpret latent structure in our models?__
 
@@ -189,7 +189,7 @@ As expected, mislabeled examples have significantly higher aLLC values, indicati
 
 In this task, our model has been 'memorizing' inputs that have *random*  labels. These mislabeled inputs are not correlated with anything else the model has learned. However, it's worth noting that in reality, (useful) data has patterns that allow it to be compressed, meaning that a model 'memorizing' a fact might look more like it adding on a new suffix to an internal Huffman tree or a new feature direction within a semantic subspace. In a sense, the spectrum between memorization and generalization is essentially about the *extent to which a model has a compressed representation of an input*.
 
-We now turn to investigating how the aLLC manifests in a *normal* setting (standard MNIST) and show that we can still detect 'memorized' points that we aren't certain aren't partially relying on some generalizing circuit. We also show that the aLLC gives intuitive results when interpreted as a continuous metric of complexity!
+We now turn to investigate how the aLLC manifests in a *normal* setting (standard MNIST) and show that we can still detect 'memorized' points that we aren't certain aren't partially relying on some generalizing circuit. We also show that the aLLC gives intuitive results when interpreted as a continuous metric of complexity!
 
 
 # aLLC in the Wild
@@ -228,14 +228,14 @@ Firstly, a behaviour is *memorization-like* if it only improves the loss on a *s
 
 For example, imagine you were given our MNIST model and were tasked with randomly noising out as many parameters (weight/biases/etc) as possible while keeping the model above a certain performance, $P$. 
 
-A good first strategy would be ranking the parameters by *their overall contribution to the loss*, then iteratively noising out the least impactful parameter until performance drops below $P$. The larger the number of inputs that depend on a parameter, the more essential the parameter is to your model. You might have a parameter that memorizes a particularly weird-looking $7$, but that doesn't help at all on all the other inputs. Noising out this parameter will only contribute to the loss on the order of $1/N$, where $N$ is the size of your dataset, and is therefore preferable to noising a parameter that helps the model on a large number of inputs, like identifying [lines or curves](https://distill.pub/2020/circuits/curve-circuits/). 
+A good first strategy would be ranking the parameters by *their overall contribution to the loss*, then iteratively noising out the least impactful parameter until performance drops below $P$. The larger the number of inputs that depend on a parameter, the more essential the parameter is to your model. You might have a parameter that memorizes a particularly weird-looking $7$, but that doesn't help at all on all the other inputs. Noising out this parameter will only contribute to the loss on the order of $1/N$, where $N$ is the size of your dataset, and is therefore preferable to noising a parameter that helps the model on a large number of inputs, like identifying [lines or curves](https://distill.pub/2020/circuits/curve-circuits/). We describe the importance of a circuit to the loss as the circuits *efficiency*.
 
-As briefly mentioned above, the temperature that we sample at during SGLD controls the 'tolerance' we have for loss. Specifically, tuning the temperature changes the *sharpness* of the loss landscape that we are traversing. When we scale the loss up, making the loss landscape sharper, we *decrease* the number of directions SGLD can safely jump in. On the other hand, when we soften the loss, making the loss landscape flatter, we *increase* the number of directions. SGLD, which incorporates a random noise factor, is a semi-random walk around parameter space. By changing the sharpness of our loss landscape, we are able to control the probability of SGLD taking a step in directions that hurt the loss 'more than a little'. 
+As briefly mentioned above, the temperature that we sample at during SGLD controls the 'tolerance' we have for loss. Specifically, tuning the temperature changes the *sharpness* of the loss landscape that we are traversing. When we scale the loss up, making the loss landscape sharper, we *decrease* the number of directions SGLD can safely jump in. On the other hand, when we soften the loss, making the loss landscape flatter, we *increase* the number of safe directions. By changing the sharpness of our loss landscape, we are able to control the probability of SGLD taking a step in directions that hurt the loss 'more than a little'
 
 <div className="mt-10"/>
 <img className="w-full mx-auto -ml-6" src="/images/memorization-is-fragile/temperature.png" alt="Initial Loss vs aLLC for MNIST model"/>
 
-In practice, this means we can __control the 'importance' of circuits that SGLD is allowed to perturb__. When the temperature is high, SGLD can only move in directions that barely hurt the loss - Importantly, directions that barely hurt the loss are *memorization* directions. 
+In practice, this means that temperature __controls the 'efficiency' of circuits that SGLD is allowed to noise out__. When the temperature is high, SGLD can only move in directions that harm low efficiency circuits. 
 
 *Because pure memorization is the *least* efficient type of circuit, below a very high temperature we should expect SGLD to always noise out *some* memorization. Also, because SGLD is implemented using minibatches we will often take sampling steps *without* accounting for the loss on some random input, which means we might step in a direction that completely noises out the circuitry used for memorization regardless of temperature.*
 
@@ -347,7 +347,7 @@ There's a lot going on in the above plot:
 * Inputs cluster by task, within which they cluster by answer. 
 * There are two clusters involving zero; A cluster where all the inputs are __multiplication with zero and a two-digit number__ (two-digit numbers are exclusive to the multiplication task), and a cluster where all the inputs are __multiplication with zero and a one-digit number__
 * Each small by-answer addition cluster contains within it multiplication inputs where both inputs are single digit. Notably all the mulitplication inputs which fit this description cluster within an addition cluster.
-* Finally, we have a large multiplication-only cluster which contains all multiplication inputs with an answer >= 10 or either input having two digits. 
+* Finally, we have a large multiplication-only cluster that contains all multiplication inputs with an answer >= 10 or either input having two digits. 
 
 But wait! We still have a simple scalar metric which we are claiming tells us about complexity. What's that saying here? 
 
@@ -361,11 +361,9 @@ Plotting the average aLLC vs answer for both tasks, we see that double-digit mul
 
 # Renormalization with Temperature
 
-Physics is built on layer upon layer of abstraction - you can talk about fluid dynamics without knowing anything about individual $H_2O$ molecules. We care about rules that govern systems at different levels, and particularly how 'particles' interact at different scales. The description of a system changes depending on the scale at which you observe it is called [*Renormalization*](https://en.wikipedia.org/wiki/Renormalization#:~:text=Renormalization%20is%20a%20collection%20of,effects%20of%20their%20self%2Dinteractions.)
+Physics is built on layer upon layer of abstraction - you can talk about fluid dynamics without knowing anything about individual $H_2O$ molecules. We care about rules that govern systems at different levels, and particularly how 'particles' interact at different scales. The description of a system changing depending on the scale at which you observe it is called [*Renormalization*](https://en.wikipedia.org/wiki/Renormalization#:~:text=Renormalization%20is%20a%20collection%20of,effects%20of%20their%20self%2Dinteractions).
 
-As we've discussed, temperature controls how much SGLD sampling 'respects' circuits - high temperatures *sharpen* the loss landscape, while low temperatures *flatten* it. In practice, this means that by tuning the temperature you control how much SGLD can move in directions which 'noise out', or 'mess with' circuits at a given efficiency. We've already seen qualitatively different clustering at different temperatures in the MNIST setting; High temperatures gave strong by-digit clusters and a distinct memorization cluster, whereas low temperatures gave a more diffuse mixing of memorized and normal inputs. It seems natural to expect similar structural differences in this new task. 
-
-For us, tuning the temperature allows us to observe structure at different scales - it can be helpful to think of temperature as revealing progressive levels of 'abstraction'. 
+As we've discussed, by tuning the temperature you control how much SGLD can move in directions which 'noise out', or 'mess with' circuits at a given efficiency. We've already seen qualitatively different clustering at different temperatures in the MNIST setting; High temperatures gave strong by-digit clusters and a distinct memorization cluster, whereas low temperatures gave a more diffuse mixing of memorized and normal inputs. It seems natural to expect similar structural differences in this new task. For us, tuning the temperature allows us to observe structure at different scales - it can be helpful to think of temperature as revealing progressive levels of 'abstraction'. 
 
 We find that clustering aLLC traces at different temperatures reveals significantly different and interpretable structures. The below plot shows tSNEs of aLLC traces taken at different temperatures, sampled from our multi-task toy transformer. We collect traces in the same way as in the previous plot. 
 
@@ -388,27 +386,27 @@ Blowing up the lowest temperature clustering, we find that it is similarly inter
   style={{ display: 'block', width: '170%', marginLeft: '-33%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
 />
 
-In this low temperature clustering, we again observe a clear separation between addition and multiplication tasks, but instead of addition inputs having interpretable sub-clusters as we saw at high temperature, we now see multiplication divided into clusters corresponding to operand properties like digit length, or the presence of zeros, or quite clearly an answer range, specifically $[1-10)$, $[10, 20)$ and $[20, 28)$. 
+In this low-temperature clustering, we again observe a clear separation between addition and multiplication tasks, but instead of addition inputs having interpretable sub-clusters as we saw at high temperature, we now see multiplication divided into clusters corresponding to operand properties like digit length, or the presence of zeros, or quite clearly an answer range, specifically $[1-10)$, $[10, 20)$ and $[20, 28)$. 
 
 Specifically, we see clusters corresponding to: 
-* Two clusters corresponding to __multiplication by zero__, one of which represents a single digit number times zero, the other of which represents a two digit number times zero. *Within both* we see subclusters corresponding to __zero being the first or second input__.
+* Two clusters corresponding to __multiplication by zero__, one of which represents a single-digit number times zero, the other of which represents a two-digit number times zero. *Within both* we see subclusters corresponding to __zero being the first or second input__.
 * __Multiplication of two one digit numbers__, with subclusters split by answer range
 * __Multiplication of a two digit and one digit number__, with subclusters split by answer range
 * __Multiplication of two two digit numbers__, with subclusters split by answer range
 
 Strikingly, perfectly positioned between the two subclusters in the 'multiplication of a single digit number by zero' cluster we see the input $(0 \times 0)$ - this input is actually a bit of an edge case, and if we *are* observing, say, a circuit in our model which checks if either input is zero, this is *exactly* where we would expect our edge case to live. This is the case because we expect  
 
-There are similarities and differences between our two tSNEs taken at different temperatures. In both, we see single digit multiplication with an answer less than 10 clustering in with addition - the difference is that in the high temperature version these group with the addition clusters by label, whereas in the low temperature version they are randomly scattered throughout the additon cluster. In the low temperature version, addition inputs form distinct clusters while multiplication is just a 'blob' - in the high temperature the reverse is true, and multiplication inputs form distinct clusters while addition inputs are diffuse.
+There are similarities and differences between our two tSNEs taken at different temperatures. In both, we see single-digit multiplication with an answer less than 10 clustering in with addition - the difference is that in the high-temperature version these group with the addition clusters by label, whereas in the low-temperature version they are randomly scattered throughout the addition cluster. In the low-temperature version, addition inputs form distinct clusters while multiplication is just a 'blob' - in the high temperature the reverse is true, and multiplication inputs form distinct clusters while addition inputs are diffuse.
 
 # What This Might Mean in Circuit-Land
 
-Being good scientists, we now should try to use our new method to make *predictions* about how our model's internals might actually look. While we haven't learned anything about how any circuitry in our model is 'actually' implemented (we haven't done anything mechanistic), we can start to make guesses as to the axes along which we can describe our model's *behaviour*; there are a couple lines of speculation which we can now lend evidence to.
+Being good scientists, we now should try to use our new method to make *predictions* about how our model's internals might actually look. While we haven't learned anything about how any circuitry in our model is 'actually' implemented (we haven't done anything mechanistic), we can start to make guesses as to the axes along which we can describe our model's *behaviour*; there are a couple of lines of speculation which we can now lend evidence to.
 
 Firstly, we have observed multiplication inputs with answers between 1 and 10 to be significantly less complex, and that at all temperatures these inputs cluster with our addition inputs. This suggests that there is some 'circuitry' which is shared between the addition and multiplication tasks. Maybe the model “reuses” or adapts an addition-like subcircuit for trivial multiplication cases (e.g. multiplying by 1, or single-digit $\times$ single-digit that is effectively repeated addition). 
 
-The separate clustering of inputs involving '$\times 0$' suggests the presence of a quick, dedicated 'check for zero' circuit that bypasses more general logic. Maybe the reason we have different clusters for $0 \times$ a two digit number and $0 \times$ a one digit number is because our model has different mechanisms for reading in different size numbers, and maybe the reason each of these zero clusters has a subcluster corresponding to the first or second input being zero is because the model has a separate mechanism for checking each index. 
+The separate clustering of inputs involving '$\times 0$' suggests the presence of a quick, dedicated 'check for zero' circuit that bypasses more general logic. Maybe the reason we have different clusters for $0 \times$ a two-digit number and $0 \times$ a one-digit number is that our model has different mechanisms for reading in different size numbers, and maybe the reason each of these zero clusters has a subcluster corresponding to the first or second input being zero is that the model has a separate mechanism for checking each index. 
 
-etc, etc.
+Etc, etc.
 
 More work interpreting results and running causal experiments is needed before we can start to grasp if these clusters *are* telling us something interesting about our models, and toy experiments where a model is understood beforehand will be of great use to hinting at *how* we should be interpreting these clusters (or similar party tricks one might cook up with aLLC traces). 
 
@@ -435,7 +433,7 @@ We plot the aLLC for each input pair in the multiplication task at three tempera
   style={{ display: 'block', width: '170%', marginLeft: '-17.5%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
 />
 
-At low temperature, there is no strong pattern to the table, but as the temperature increases we see low-aLLC inputs form spirals for certain answers. We also see multiplication clusters transition from 10 large, uniform clusters to many smaller, high aLLC sub-clusters corresponding to the answer, some of which move close to addition clusters. 
+At low temperatures, there is no strong pattern to the table, but as the temperature increases we see low-aLLC inputs form spirals for certain answers. We also see multiplication clusters transition from 10 large, uniform clusters to many smaller, high aLLC sub-clusters corresponding to the answer, some of which move close to addition clusters. 
 
 <div style={{ display: 'flex', alignItems: 'flex-start', marginTop: '30px', marginBottom: '30px' }}>
   <div style={{ marginRight: '20px' }}>
@@ -489,7 +487,7 @@ We get to reap the benefits SLT has us expect when we have correctly set our tem
 
 We see that the losses on mislabeled points and normal points converge to a steady value - we find that traces that converge give more interpretable clusters than traces that don't. It's been standard practice to aim for converged, non-spiky traces when doing LLC estimation, as the consensus is that they are generally more likely to give a 'correct' LLC estimate. LLC estimation, however, [is a bit more of an art than a science](https://arc.net/l/quote/omthwmjs), and so techniques that break down the estimation into parts (like this) are likely good avenues for gaining more insight into what our 'estimate' is actually 'estimating'. 
 
-For an example, the following is an interesting example of a *bad* trace. It's only when we break the trace into parts that we see how poorly it does:
+For example, the following is an interesting example of a *bad* trace. It's only when we break the trace into parts that we see how poorly it does:
 
 <img
   src="/images/memorization-is-fragile/weird_trace.png"
@@ -501,7 +499,7 @@ For an example, the following is an interesting example of a *bad* trace. It's o
 
 To demonstrate that that the aLLC generalizes beyond small models and tasks, we examined how memorization manifests in language models. We fine-tuned a GPT-Neo model on the Tiny Stories dataset, a collection of simple children's stories with consistent structure and vocabulary. Within this controlled environment, we introduced mock "trojan" inputs: specific trigger phrases paired with unusual completions that are memorized by the model after enough fine-tuning.
 
-Tiny Stories provides an ideal testbed because its simplicity and repetitive nature mean that a model trained on it is predominantly learning generalizable patterns rather than memorizing specific sequences:
+Tiny Stories provides an ideal testbed because it's simplicity and repetitive nature mean that a model trained on it is predominantly learning generalizable patterns rather than memorizing specific sequences:
 
 > Once upon a time, there was a boy named Tim. He liked to wear a big, dark hat. The hat was his favourite thing to wear. Tim wore the hat everywhere he went...
 
@@ -552,7 +550,7 @@ We see that around 100 steps of SGLD is where the trojan anomaly score peaks, bu
 
 In this work, we have developed and demonstrated a novel approach to neural network interpretability using tools from Singular Learning Theory. By extending the Local Learning Coefficient to operate at the level of individual inputs - which we called the Atomic LLC (aLLC) — we've introduced a possible first step towards using differences in circuit complexity to reveal interpretable structure within models.
 
-In the MNIST setting, we showed that memorized examples have distinctly higher aLLC values and cluster distinctly when analyzing loss patterns over the tempered posterior. In our modular arithmetic transformer, we successfully grouped model behaviours in interpretable ways at variaous temperatures, revealing that structural patterns emerge at different temperature scales. Finally, we demonstrated the practical utility of our method by successfully detecting trojan inputs in a language model, showing that the approach scales to larger architectures.
+In the MNIST setting, we showed that memorized examples have distinctly higher aLLC values and cluster distinctly when analyzing loss patterns over the tempered posterior. In our modular arithmetic transformer, we successfully grouped model behaviours in interpretable ways at various temperatures, revealing that structural patterns emerge at different temperature scales. Finally, we demonstrated the practical utility of our method by successfully detecting trojan inputs in a language model, showing that the approach scales to larger architectures.
 
 Perhaps most significantly, our temperature-based analysis reveals how neural networks organize computation at different scales of efficiency. Like renormalization in physics, where different descriptions emerge at different scales, neural networks appear to organize their computational structures hierarchically. By controlling the temperature in our sampling process, we can selectively reveal different layers of this structure, from coarse task boundaries to fine-grained implementation details.
 
