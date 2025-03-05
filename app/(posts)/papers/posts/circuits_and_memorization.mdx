@@ -340,12 +340,12 @@ The below plot is a tSNE of the aLLC traces taken from our model, coloured by ta
 <img
   src="/images/memorization-is-fragile/mod_add_mod_mult_interp.png"
   alt="LLC vs Sparsity Comparison"
-  style={{ display: 'block', width: '150%', marginLeft: '-23%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+  style={{ display: 'block', width: '170%', marginLeft: '-33%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
 />
 
 There's a lot going on in the above plot: 
 * Inputs cluster by task, within which they cluster by answer. 
-* There are two clusters involving zero; A cluster where all the inputs are *multiplication with zero and a two-digit number* (two-digit numbers are exclusive to the multiplication task), and a cluster where the answer is zero but which contains subclusters of *multiplication of two one-digit numbers* and a zero, and addition equal to zero.
+* There are two clusters involving zero; A cluster where all the inputs are __multiplication with zero and a two-digit number__ (two-digit numbers are exclusive to the multiplication task), and a cluster where all the inputs are __multiplication with zero and a one-digit number__
 * Each small by-answer addition cluster contains within it multiplication inputs where both inputs are single digit. Notably all the mulitplication inputs which fit this description cluster within an addition cluster.
 * Finally, we have a large multiplication-only cluster which contains all multiplication inputs with an answer >= 10 or either input having two digits. 
 
@@ -372,7 +372,7 @@ We find that clustering aLLC traces at different temperatures reveals significan
 <img
   src="/images/memorization-is-fragile/different_temperatures_reveal_different_circuitry.png"
   alt="LLC vs Sparsity Comparison"
-  style={{ display: 'block', width: '250%', marginLeft: '-60%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+  style={{ display: 'block', width: '220%', marginLeft: '-50%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
 />
 
 * At low temperatures, all the modular addition inputs form just a blob, but as we increase the temperature we see smaller, answer-specific clusters emerge. 
@@ -380,22 +380,41 @@ We find that clustering aLLC traces at different temperatures reveals significan
 * At low temperatures, the split between multiplication inputs and addition inputs is sharp, with only single-digit multiplication inputs clustering with addition inputs. As temperature increases the divide lessens and we see more multiplication inputs cluster with addition inputs.  
 * At low temperatures some modular addition inputs are high aLLC, but these quickly drop off as temperature increases. 
 
+Blowing up the lowest temperature clustering, we find that it is similarly interpretable to our previous clustering taken at high temperature, but that it reveals what we believe is *qualitatively different circuitry:*
+
 <img
   src="/images/memorization-is-fragile/low_temperature_clustering_multitask.png"
   alt="LLC vs Sparsity Comparison"
-  style={{ display: 'block', width: '150%', marginLeft: '-23%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+  style={{ display: 'block', width: '170%', marginLeft: '-33%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
 />
 
-Blowing up the lowest temperature clustering, we find that it is similarly interpretable to our previous clustering taken at high temperature, but that it reveals what we believe are *different circuits*. In this low temperature clustering, we again observe a clear separation between addition and multiplication tasks, but instead of addition inputs having interpretable sub-clusters as we saw at high temperature, we now see multiplication divided into clusters corresponding to operand properties - Specifically, we see: 
-* Clusters where one input is one digit and the other a zero
-* Clusters by This structure suggests the model has developed different circuit
+In this low temperature clustering, we again observe a clear separation between addition and multiplication tasks, but instead of addition inputs having interpretable sub-clusters as we saw at high temperature, we now see multiplication divided into clusters corresponding to operand properties like digit length, or the presence of zeros, or quite clearly an answer range, specifically $[1-10)$, $[10, 20)$ and $[20, 28)$. 
 
-In striking contrast, our high temperature clustering (Figure 2) reveals a reorganization where inputs cluster primarily by their answer values rather than operation type. Addition inputs form precise answer-specific clusters (0-9), while most multiplication inputs consolidate into a single large cluster, with only special cases (zeros, small single-digit operations) forming separate clusters that sometimes intermingle with addition clusters of corresponding answers.
+Specifically, we see clusters corresponding to: 
+* Two clusters corresponding to __multiplication by zero__, one of which represents a single digit number times zero, the other of which represents a two digit number times zero. *Within both* we see subclusters corresponding to __zero being the first or second input__.
+* __Multiplication of two one digit numbers__, with subclusters split by answer range
+* __Multiplication of a two digit and one digit number__, with subclusters split by answer range
+* __Multiplication of two two digit numbers__, with subclusters split by answer range
 
+Strikingly, perfectly positioned between the two subclusters in the 'multiplication of a single digit number by zero' cluster we see the input $(0 \times 0)$ - this input is actually a bit of an edge case, and if we *are* observing, say, a circuit in our model which checks if either input is zero, this is *exactly* where we would expect our edge case to live. This is the case because we expect  
+
+There are similarities and differences between our two tSNEs taken at different temperatures. In both, we see single digit multiplication with an answer less than 10 clustering in with addition - the difference is that in the high temperature version these group with the addition clusters by label, whereas in the low temperature version they are randomly scattered throughout the additon cluster. In the low temperature version, addition inputs form distinct clusters while multiplication is just a 'blob' - in the high temperature the reverse is true, and multiplication inputs form distinct clusters while addition inputs are diffuse.
+
+# What This Might Mean in Circuit-Land
+
+Being good scientists, we now should try to use our new method to make *predictions* about how our model's internals might actually look. While we haven't learned anything about how any circuitry in our model is 'actually' implemented (we haven't done anything mechanistic), we can start to make guesses as to the axes along which we can describe our model's *behaviour*; there are a couple lines of speculation which we can now lend evidence to.
+
+Firstly, we have observed multiplication inputs with answers between 1 and 10 to be significantly less complex, and that at all temperatures these inputs cluster with our addition inputs. This suggests that there is some 'circuitry' which is shared between the addition and multiplication tasks. Maybe the model “reuses” or adapts an addition-like subcircuit for trivial multiplication cases (e.g. multiplying by 1, or single-digit $\times$ single-digit that is effectively repeated addition). 
+
+The separate clustering of inputs involving '$\times 0$' suggests the presence of a quick, dedicated 'check for zero' circuit that bypasses more general logic. Maybe the reason we have different clusters for $0 \times$ a two digit number and $0 \times$ a one digit number is because our model has different mechanisms for reading in different size numbers, and maybe the reason each of these zero clusters has a subcluster corresponding to the first or second input being zero is because the model has a separate mechanism for checking each index. 
+
+etc, etc.
+
+More work interpreting results and running causal experiments is needed before we can start to grasp if these clusters *are* telling us something interesting about our models, and toy experiments where a model is understood beforehand will be of great use to hinting at *how* we should be interpreting these clusters (or similar party tricks one might cook up with aLLC traces). 
 
 ## Spirals in the Machine
 
-Plotting a 'modular multiplication table', we also observe an interesting 'spiral' structure reveal itself as we transition from low to high temperature. Specifically, it seems that some *outputs* have higher complexity than others.
+In our previously plotted bar chart, we saw that outputs with answers less than ten are significantly less complex. We can visualize this in a nicer way by plotting a 'modular multiplication table'. This also makes for an astute example of how different temperatures give different aLLC estimations and, therefore, LLC estimations, and suggests that by decomposing our LLC estimations we might often be able to assess how 'accurate' our reading is. 
 
 <div style={{ display: 'flex', alignItems: 'flex-start', marginTop: '30px', marginBottom: '30px' }}>
   <img
@@ -417,8 +436,6 @@ We plot the aLLC for each input pair in the multiplication task at three tempera
 />
 
 At low temperature, there is no strong pattern to the table, but as the temperature increases we see low-aLLC inputs form spirals for certain answers. We also see multiplication clusters transition from 10 large, uniform clusters to many smaller, high aLLC sub-clusters corresponding to the answer, some of which move close to addition clusters. 
-
-A good first instinct might be that the spirals are just inputs that lead to a zero output, but that would be boring and so isn't the case. Why exactly these inputs are low-aLLC is unclear, but they do nonetheless tell us something about how the model has implemented the multiplication algorithm that metrics like the loss do not. While these spirals don't naturally explain themselves, they give us a hints and a starting point to apply more classic mechanistic interpretability techniques. 
 
 <div style={{ display: 'flex', alignItems: 'flex-start', marginTop: '30px', marginBottom: '30px' }}>
   <div style={{ marginRight: '20px' }}>
@@ -449,10 +466,6 @@ We see that that temperature certainly has an effect on our clustering and that 
 * For all temperatures above 1, clusters group into extremely small bundles, and these bundles seem to slowly diffuse as training progresses. Lower temperatures are the first to become diffuse. 
 
 ## Notes on Circuit Clustering
-
-As models continue to grow in size and capability, techniques like ours that can efficiently probe their internal structure without requiring white-box access to every parameter will become increasingly valuable. The aLLC and related methods offer promising avenues for understanding how models learn, memorize, and generalize—insights that are crucial for building more robust, reliable, and interpretable AI systems.
-
-While this clustering reveals patterns that seemingly align with intuition, we emphasize that we have no evidence these interpretations are 'causal', and further we have not thoroughly discussed the fundamental differences in interpretability techniques which aim to describe model *behaviour* vs those which describe the gears-level mechanisms which give rise to those behaviours. Further work exploring interventions would be needed to lend authority to attempts trying to link apparently intriguing clusters to specific model behaviour or internals. Our method (and many interpretability methods) should be viewed as generating hypotheses about model computation rather than proving mechanistic explanations.
 
 At the end of the day what we have here is 
 > A) a technique for perturbing a model and observing changes in behaviour
