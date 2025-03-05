@@ -448,53 +448,6 @@ At low temperatures, there is no strong pattern to the table, but as the tempera
   />
 </div>
 
-# MNIST, Again
-We take a step back to our original MNIST synthetic memorization task to investigate the effects of temperature. We sweep over a range of temperatures and developmental stages. The top plot shows LLC estimations for each input set taken, and the below plot shows tSNE clusters of aLLC traces, and each plot corresponds to the epoch axis and shows the same sweep of temperatures. 
-
-<img
-  src="/images/memorization-is-fragile/developmental_and_temp_mnist.png"
-  alt="LLC vs Sparsity Comparison"
-  style={{ display: 'block', width: '200%', marginLeft: '-32%', maxWidth: 'none', marginTop: '50px', marginBottom: '50px'}}
-/>
-
-We see that that temperature certainly has an effect on our clustering and that increasing the temperature 'breaks' apart clusters in a similar way it did in the modular-multitask setup. Specifically: 
-* Mislabeled points form their own, distinct cluster quite early in training. 
-* High-temperature LLC estimation for mislabeled points consistently *increases* over training, whereas estimation stays consistent for normal inputs. 
-* Clusters in the 'top right corner' are generally more diffuse, whereas clusters in the 'bottom left corner' are more divided and sharp. 
-* For all temperatures above 1, clusters group into extremely small bundles, and these bundles seem to slowly diffuse as training progresses. Lower temperatures are the first to become diffuse. 
-
-## Notes on Circuit Clustering
-
-At the end of the day what we have here is 
-> A) a technique for perturbing a model and observing changes in behaviour
-
-mixed with 
-
-> B) a technique for detecting the complexity of circuits
-
-While tempering differentiates circuits by their efficiency, we can still expect to see some clustering by *circuit* (not circuit efficiency) due to the randomness of SGLD - each step will improve one circuit more than another, leading to a trace being similar to many small ablation experiments. It is because memorization is the *least* efficient type of circuit that we expect the granularity of our traces to differentiate firstly by memorization vs any 'real' circuit. Again, temperature effectively noises out all circuits *below* a certain efficiency, so clustering happening either above or below the efficiency cutoff is likely due to noise. 
-
-
-## Notes on SGLD Convergence
-
-We get to reap the benefits SLT has us expect when we have correctly set our temperature, and in practice when our traces have 'converged', i.e. settled on a level set of the loss. For example, in our MNIST setup, we can visualize how our temperature is noising out all the tiny memorization our model had done by comparing the average loss on the mislabeled vs normal points over the course of sampling: 
-
-<img
-  src="/images/memorization-is-fragile/SGLD_trace_mislabeled_v_norm.png"
-  alt="LLC vs Sparsity Comparison"
-  style={{ display: 'block', width: '150%', marginLeft: '-10%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
-/>
-
-We see that the losses on mislabeled points and normal points converge to a steady value - we find that traces that converge give more interpretable clusters than traces that don't. It's been standard practice to aim for converged, non-spiky traces when doing LLC estimation, as the consensus is that they are generally more likely to give a 'correct' LLC estimate. LLC estimation, however, [is a bit more of an art than a science](https://arc.net/l/quote/omthwmjs), and so techniques that break down the estimation into parts (like this) are likely good avenues for gaining more insight into what our 'estimate' is actually 'estimating'. 
-
-For example, the following is an interesting example of a *bad* trace. It's only when we break the trace into parts that we see how poorly it does:
-
-<img
-  src="/images/memorization-is-fragile/weird_trace.png"
-  alt="LLC vs Sparsity Comparison"
-  style={{ display: 'block', width: '150%', marginLeft: '-10%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
-/>
-
 # Scaling Mechanistic Detection of Memorization
 
 To demonstrate that that the aLLC generalizes beyond small models and tasks, we examined how memorization manifests in language models. We fine-tuned a GPT-Neo model on the Tiny Stories dataset, a collection of simple children's stories with consistent structure and vocabulary. Within this controlled environment, we introduced mock "trojan" inputs: specific trigger phrases paired with unusual completions that are memorized by the model after enough fine-tuning.
@@ -587,7 +540,56 @@ Finally, an incomplete list of some good next steps for the aLLC:
 
 # Appendix
 
-# A Toy Model of Memorization
+# MNIST, Again
+We step back to our original MNIST synthetic memorization task to investigate the effects of temperature. We sweep over a range of temperatures and developmental stages. The top plot shows LLC estimations for each input set taken, and the below plot shows tSNE clusters of aLLC traces, and each plot corresponds to the epoch axis and shows the same sweep of temperatures. 
+
+<img
+  src="/images/memorization-is-fragile/developmental_and_temp_mnist.png"
+  alt="LLC vs Sparsity Comparison"
+  style={{ display: 'block', width: '200%', marginLeft: '-32%', maxWidth: 'none', marginTop: '50px', marginBottom: '50px'}}
+/>
+
+We see that that temperature certainly has an effect on our clustering and that increasing the temperature 'breaks' apart clusters in a similar way it did in the modular-multitask setup. Specifically: 
+* Mislabeled points form their own, distinct cluster quite early in training. 
+* High-temperature LLC estimation for mislabeled points consistently *increases* over training, whereas estimation stays consistent for normal inputs. 
+* Clusters in the 'top right corner' are generally more diffuse, whereas clusters in the 'bottom left corner' are more divided and sharp. 
+* For all temperatures above 1, clusters group into extremely small bundles, and these bundles seem to slowly diffuse as training progresses. Lower temperatures are the first to become diffuse. 
+
+
+## Notes on Circuit Clustering
+
+At the end of the day what we have here is 
+> A) a technique for perturbing a model and observing changes in behaviour
+
+mixed with 
+
+> B) a technique for detecting the complexity of circuits
+
+While tempering differentiates circuits by their efficiency, we can still expect to see some clustering by *circuit* (not circuit efficiency) due to the randomness of SGLD - each step will improve one circuit more than another, leading to a trace being similar to many small ablation experiments. It is because memorization is the *least* efficient type of circuit that we expect the granularity of our traces to differentiate firstly by memorization vs any 'real' circuit. Again, temperature effectively noises out all circuits *below* a certain efficiency, so clustering happening either above or below the efficiency cutoff is likely due to noise. 
+
+
+## Notes on SGLD Convergence
+
+We get to reap the benefits SLT has us expect when we have correctly set our temperature, and in practice when our traces have 'converged', i.e. settled on a level set of the loss. For example, in our MNIST setup, we can visualize how our temperature is noising out all the tiny memorization our model had done by comparing the average loss on the mislabeled vs normal points over the course of sampling: 
+
+<img
+  src="/images/memorization-is-fragile/SGLD_trace_mislabeled_v_norm.png"
+  alt="LLC vs Sparsity Comparison"
+  style={{ display: 'block', width: '150%', marginLeft: '-10%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+/>
+
+We see that the losses on mislabeled points and normal points converge to a steady value - we find that traces that converge give more interpretable clusters than traces that don't. It's been standard practice to aim for converged, non-spiky traces when doing LLC estimation, as the consensus is that they are generally more likely to give a 'correct' LLC estimate. LLC estimation, however, [is a bit more of an art than a science](https://arc.net/l/quote/omthwmjs), and so techniques that break down the estimation into parts (like this) are likely good avenues for gaining more insight into what our 'estimate' is actually 'estimating'. 
+
+For example, the following is an interesting example of a *bad* trace. It's only when we break the trace into parts that we see how poorly it does:
+
+<img
+  src="/images/memorization-is-fragile/weird_trace.png"
+  alt="LLC vs Sparsity Comparison"
+  style={{ display: 'block', width: '150%', marginLeft: '-10%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+/>
+
+
+## A Toy Model of Memorization
 Let's construct a minimal example that illustrates why memorization is fragile. We'll build a simple two-neuron model that attempts to perfectly memorize a single input by using increasingly precise parameter settings. If we perturb these parameters, the memorized point's loss spikes. This demonstrates why per-input loss sharpness is a good way to detect memorization.
 
 A new section, a new model. Recall our previous two neuron model: 
