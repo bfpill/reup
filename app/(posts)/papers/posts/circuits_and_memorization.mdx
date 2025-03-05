@@ -15,9 +15,9 @@ time:
 
 # Introduction
 
-Neural Networks are learning machines not unlike gardens. When you train a model, you grow a garden of *circuits*. Circuits can be simple or complex, useful or useless - all properties that inform the development and behaviour of our models.
+Neural Networks are machines not unlike gardens. When you train a model, you are growing a garden of *circuits*. Circuits can be simple or complex, useful or useless - all properties that inform the development and behaviour of our models.
 
-Simple circuits are simple because they are made up of a small number of parts put together in a simple way, which generally manifests as their behaviour being robust to small perturbations in both individual parts and their interconnections. Complex circuits are complex because they require a precise combination of highly detailed parts, which generally manifests as their behaviour being fragile and breaking if any part changes even slightly. We can describe a model's behaviour on an input as falling on a spectrum of complexity - some inputs demand complex circuits, while for others simple mechanisms suffice.
+Simple circuits are simple because they are made up of a small number of parts put together in a simple way, which generally manifests as their behaviour being robust to small perturbations in both individual parts and their interconnections. Complex circuits are complex because they require a precise combination of highly detailed parts, which generally manifests as their behaviour being fragile and breaking with even a small change to any part. We can describe a model's behaviour on an input as falling on a spectrum of complexity - some inputs demand complex circuits, while for others simple mechanisms suffice.
 
 There is a certain vein of interpretability-oriented questions that we could attempt to answer by studying this spectrum. This post will attempt to study a first question: __To what extent are we able to leverage differences in circuit complexity to uncover and interpret latent structure in our models?__
 
@@ -48,12 +48,10 @@ We then use these techniques to study the internal structure of a Transformer tr
 
 Singular Learning Theory (SLT) is based around the idea of 'degenerate' functions. A function is 'degenerate' or 'singular' when changing the function's parameterization may not change its output. It turns out that Neural Networks (NN's) are [*quite*](https://arxiv.org/pdf/2010.11560) singular objects. Previous 'learning theories' were built around theory that made sense for *simple* regression models and such, where parameterizations weren't degenerate. SLT studies how neural networks *actually* learn by accounting for this degeneracy in the mapping from parameter space to function space. Better models of parameter space geometry help explain why deep models learn certain solutions, exhibit 'phase changes' ('grok'), and give us better tools for describing the effects of data on the developmental process. More generally, SLT gives us the right tools for thinking about the 'complexity' of models (e.g. beyond simple methods of basin curvature).
 
-The current goals of Singular Learning Theory are as follows: 
+Some current goals of Singular Learning Theory are as follows: 
 
 * Define the relationship between learned algorithmic structure and our training data
 * Allow us to better monitor the formation of a model's internal structure in hopes of predicting sudden changes in behaviour ('sharp left turns')
-* Help us understand the boundary between specialization and generalization
-* Help us understand how finetuning changes a model's internal structure
 
 *The next sections will introduce some basic SLT concepts. If you're already familiar with SLT's main ideas feel free to skip down to 'The Atomic LLC, or (a)LLC'*
 
@@ -166,7 +164,7 @@ The [current technique](https://arxiv.org/pdf/2308.12108) SLT practitioners use 
 
 $$\Delta w_t = \frac{\epsilon}{2}\left[\beta n\frac{1}{m}\sum_{(x,y)\in B_t}\nabla \log p(y|x, w_t) + \gamma(w^* - w_t)\right] + \mathcal{N}(0, \epsilon)$$
 
-where $B_t$ is a randomly sampled minibatch, $\beta$ controls the temperature, $\gamma$ is the strength of the restoring force toward the original parameter point $w^*$, and $\epsilon$ is the step size that also scales the injected Gaussian noise. This approach enables efficient exploration of the posterior without requiring prohibitively expensive full-batch computations, allowing estimates to be taken [at scale](https://arxiv.org/abs/2402.02364). 
+where $B_t$ is a randomly sampled minibatch, $\beta$ controls the temperature, $\gamma$ is the strength of the restoring force toward the original parameter point $w^*$, and $\epsilon$ is the step size that also scales the injected Gaussian noise. This approach enables efficient exploration of the posterior without requiring prohibitively expensive full-batch computations, allowing estimates to be taken [at scale](https://arxiv.org/abs/2402.02364). *More on temperature will be discussed below!*
 
 
 # The Atomic LLC, or *(a)LLC*
@@ -217,10 +215,17 @@ To verify that the aLLC is telling us more than just how 'well' the model does o
   style={{ display: 'block', width: '170%', marginLeft: '-28%', maxWidth: 'none', marginTop: '70px', marginBottom: '100px'}}
 />
 
-*By training a simple linear regression on aLLC traces (introduced below), we can successfully classify mislabeled points with an overall accuracy of 0.99 across 6000 samples, where a precision of 0.96 for mislabeled examples indicates that some correctly labelled points display similar fragility patterns to memorized examples. Alternative methods that capture per-input complexity on MNIST scale include [NTK](https://en.wikipedia.org/wiki/Neural_tangent_kernel) approximations, per-sample gradient metrics, and Hessian spectrum analyses. NTK methods, which treat wide networks as kernels, typically require computing an $$n\times n$$ matrix with [runtimes of $$O(n^2)$$–$$O(n^3)$$]((https://arxiv.org/abs/2111.11418)). Per-sample gradient techniques rank training examples by [the norm of their gradient or prediction error](https://arxiv.org/abs/2107.07075) and only add the cost of an extra backward pass per example, but don't do well in identifying *simple* examples. [Hessian-based](https://www.stat.berkeley.edu/~mmahoney/pubs/hessian_nips18.pdf#:~:text=a%20Hessian%20based%20study%20to,to%20favors%20flat%20areas%2C%20as) approaches, including influence functions, offer detailed curvature estimates but demand expensive $$O(P^2)$$ memory and $$O(P^3)$$ time computations. In [Superposition, Memorization, and Double Descent](https://transformer-circuits.pub/2023/toy-double-descent/index.html), Henighan et al. (2023) studied memorization in the superposition regime, showing how dataset size affects model representations. In a [footnote](https://arc.net/l/quote/wkzawsnc), Chris Olah introduced *fractional data dimensionality*, a metric quantifying how many independent feature directions a single data point occupies within a learned representation. Unlike curvature-based approaches, this method provides a direct view of representation complexity. However, its applicability remains limited, as it has only been demonstrated in toy settings where superposition properties can be explicitly measured in a single-layer model. Collecting 1000-step aLLC traces for 3,000 inputs takes ~30 seconds on a standard Macbook. To our knowledge, there doesn't appear to be a clear example of an easy-to-estimate per-input 'complexity' metric which captures a nuanced spectrum of complexity in the way we've demonstrated the aLLC can.*
+Aside from the clear visual differences in points By training a simple linear regression on aLLC traces (introduced below), we can successfully classify mislabeled points with an overall accuracy of over 0.95, with a precision of 0.96 for mislabeled examples indicating that some correctly labelled points display similar fragility patterns to memorized examples. 
+
+### Alternative Methods
+Other techniques for that capture per-input complexity on MNIST scale include [NTK](https://en.wikipedia.org/wiki/Neural_tangent_kernel) approximations, per-sample gradient metrics, and Hessian spectrum analyses. NTK methods, which treat wide networks as kernels, typically require computing an $$n\times n$$ matrix with [runtimes of $$O(n^2)$$–$$O(n^3)$$]((https://arxiv.org/abs/2111.11418)). Per-sample gradient techniques rank training examples by [the norm of their gradient or prediction error](https://arxiv.org/abs/2107.07075) and only add the cost of an extra backward pass per example, but don't do well in identifying *simple* examples. [Hessian-based](https://www.stat.berkeley.edu/~mmahoney/pubs/hessian_nips18.pdf#:~:text=a%20Hessian%20based%20study%20to,to%20favors%20flat%20areas%2C%20as) approaches, including influence functions, offer detailed curvature estimates but demand expensive $$O(P^2)$$ memory and $$O(P^3)$$ time computations. 
+
+In [Superposition, Memorization, and Double Descent](https://transformer-circuits.pub/2023/toy-double-descent/index.html), Henighan et al. (2023) studied memorization in the superposition regime, showing how dataset size affects model representations. In a [footnote](https://arc.net/l/quote/wkzawsnc), Chris Olah introduced *fractional data dimensionality*, a metric quantifying how many independent feature directions a single data point occupies within a learned representation. Unlike curvature-based approaches, this method provides a direct view of representation complexity. However, its applicability remains limited, as it has only been demonstrated in toy settings where superposition properties can be explicitly measured in a single-layer model. 
+
+Collecting 1000-step aLLC traces for 3,000 inputs takes ~30 seconds on a standard Macbook. To our knowledge, there doesn't appear to be a clear example of an easy-to-estimate per-input 'complexity' metric which captures a nuanced spectrum of complexity in the way we've demonstrated the aLLC can.
 
 
-# But Why? - *Temperature*
+# But How? - *Temperature*
 
 Why can we distinguish memorization from generalization? Let's start with a couple of intuition bumps:
 
@@ -230,7 +235,7 @@ For example, imagine you were given our MNIST model and were tasked with randoml
 
 A good first strategy would be ranking the parameters by *their overall contribution to the loss*, then iteratively noising out the least impactful parameter until performance drops below $P$. The larger the number of inputs that depend on a parameter, the more essential the parameter is to your model. You might have a parameter that memorizes a particularly weird-looking $7$, but that doesn't help at all on all the other inputs. Noising out this parameter will only contribute to the loss on the order of $1/N$, where $N$ is the size of your dataset, and is therefore preferable to noising a parameter that helps the model on a large number of inputs, like identifying [lines or curves](https://distill.pub/2020/circuits/curve-circuits/). 
 
-As briefly mentioned above, the temperature that we sample at during SGLD controls the 'tolerance' the sampler has points with high loss. Specifically, tuning the temperature changes the *sharpness* of the loss landscape that we are traversing. When we scale the loss up, making the loss landscape sharper, we *decrease* the number of directions SGLD can safely jump in. On the other hand, when we soften the loss, making the loss landscape flatter, we *increase* the number of directions. SGLD, which incorporates a random noise factor, is a semi-random walk around parameter space. By changing the sharpness of our loss landscape, we are able to control the probability of SGLD taking a step in directions that hurt the loss 'more than a little'. 
+As briefly mentioned above, the temperature that we sample at during SGLD controls the 'tolerance' we have for loss. Specifically, tuning the temperature changes the *sharpness* of the loss landscape that we are traversing. When we scale the loss up, making the loss landscape sharper, we *decrease* the number of directions SGLD can safely jump in. On the other hand, when we soften the loss, making the loss landscape flatter, we *increase* the number of directions. SGLD, which incorporates a random noise factor, is a semi-random walk around parameter space. By changing the sharpness of our loss landscape, we are able to control the probability of SGLD taking a step in directions that hurt the loss 'more than a little'. 
 
 <div className="mt-10"/>
 <img className="w-full mx-auto -ml-6" src="/images/memorization-is-fragile/temperature.png" alt="Initial Loss vs aLLC for MNIST model"/>
@@ -315,17 +320,29 @@ So far, we've explored how we can differentiate memorized inputs from inputs tha
 
 A good setting for trying to distinguish between circuits is when we have a model trained to do a handful of completely different tasks. For extra technical jargon, we'd like our tasks to be orthogonal in function space, which means that getting better at task $A$ shouldn't mean you naturally get better at $B$. Ideally, we'd like our model to have separate circuits for each task, but verifying this is difficult and so to start with we’re going to work with tasks that we can say definitely *require* some separate circuitry. 
 
-Specifically, we train a two-layer transformer to perform both modular addition and modular multiplication, where addition is done mod $p_1$ and multiplication is mod $p_2$. Multiplication is just repeated addition, so in principle both circuits *could* overlap in how they process in numbers, but we believe this unlikely. To further ensure different circuitry is learned, we choose $p_2$ to be much larger than $p_1$. 
+### The Setup
+We train a two-layer transformer to perform both modular addition and modular multiplication, where addition is done mod $p_1$ and multiplication is mod $p_2$. Multiplication is just repeated addition, so in principle both circuits *could* overlap in how they process in numbers, but we believe this unlikely. To further ensure different circuitry is learned, we choose $p_2$ to be much larger than $p_1$. 
 
 To mitigate any possibility that our aLLC traces are getting contaminated by logit boosting (which we also believe is unlikely), we tokenize our task in a relatively contrived manner to ensure each input contains the same number and type of tokens: 
 
-If the input string starts with one `.`, the output is the *product* of the two following numbers mod p. For example: `".. 6 2 2" (if p is 10)`
+If the input string starts with one `.`, the output is the *product* of the two following numbers mod , but if it starts with a single period and has a second period in between the two numbers, the output number is expected to be the *sum* mod p.
 
-If the input string starts with a single period and has a second period in between the two numbers, the output number is expected to be the *sum* mod p. For example: `". 12 . 5 5" (if p is 12)`. 
+
+For example: $(6 * 2) \% p ≡ 10$ would be tokenized as
+
+ `".. 6 2 2" (if p is 10)`
+
+and 
+$(12 + 5) \% p ≡ 5$ would be tokenized as 
+
+`". 12 . 5 5" (if p is 12)`. 
 
 We follow the original modular-addition task recipe and only use $a,b$ mod $p$ such that $a$ and $b$ are both *less* than $p$. 
 
-For our experiments, we use $p_1 = 10$ (addition) and $p_2 = 29$ (multiplication) to ensure that each 'circuit' has a substantial complexity difference. We train our model until convergence and collect aLLC traces using 1000 steps of SGLD, finding that more steps give a more stable clustering. A subtle note is that because $p_1 < p_2$ we have fewer modular addition inputs than modular multiplication inputs, which may bias our SGLD sampling towards caring more about the multiplications circuits. To ensure our sampling is fair, we duplicate addition inputs in the dataset we use for SGLD sampling. 
+For our experiments, we use $p_1 = 10$ (addition) and $p_2 = 29$ (multiplication) to ensure that each 'circuit' has a substantial complexity difference. We train our model until convergence and collect aLLC traces using 1000 steps of SGLD, finding that more steps give a more stable clustering. A subtle note is that because $p_1 < p_2$ we have fewer modular addition inputs than modular multiplication inputs, which may bias our SGLD sampling towards caring more about the multiplications circuits. To ensure our sampling is fair, we equalize task weighting in the dataset by adding duplicate addition inputs to our sampling dataset. We train our model to convergence. 
+
+The below plot is a tSNE of the aLLC traces taken from our model, coloured by task type and labeled by manual inspection. 
+
 
 <img
   src="/images/memorization-is-fragile/mod_add_mod_mult_interp.png"
