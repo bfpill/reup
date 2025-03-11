@@ -185,7 +185,7 @@ where the rest of the terms are the same as in the formula for the LLC (above).
 
 We will refer to $\hat{\lambda}(x;\hat{\theta}^*)$ as the __per-sample LLC__, or __pLLC__. 
 
-The modifications to SGLD needed are few. We can collect per-sample LLC's for each input by tracking the *per-input* losses at each step of SGLD. This lets us learn about how each input contributes to the loss, from which we expect to be able to learn interesting things that an average loss couldn't tell us. 
+The modifications to SGLD needed are few. We can collect pLLC's for each sample simply by tracking the *per-sample* losses at each step of SGLD. This lets us learn about how each input contributes to the loss, from which we expect to be able to learn interesting things that an average loss couldn't tell us. 
 
 In the next section, we'll use the pLLC as a scalar metric of 'complexity' which we can use to distinguish memorized inputs from inputs with generalizing features. 
 We hypothesize that inputs a model memorizes will have the highest per-sample LLC values, as memorization is the most fragile and least efficient form of computation. Memorization should rely on highly specific parameter configurations, which degrade rapidly under small perturbations introduced by SGLD sampling. Thus, measuring per-sample LLCs provides a direct means to distinguish memorized inputs (high LLC) from inputs that utilize more general and robust circuits (lower LLC).
@@ -421,7 +421,7 @@ We plot the pLLC for each input pair in the multiplication task at three tempera
 <img
   src="/images/memorization-is-fragile/structure_reveal_at_the_right_temperature.png"
   alt="LLC vs Sparsity Comparison"
-  style={{ display: 'block', width: '170%', marginLeft: '-17.5%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
+  style={{ display: 'block', width: '170%', marginLeft: '-22.5%', maxWidth: 'none', marginTop: '70px', marginBottom: '70px'}}
 />
 
 At high temperatures, there is no strong pattern to the table, but as the temperature decreases we see low-pLLC inputs form spirals for certain answers. We also see multiplication clusters transition from 10 large, uniform clusters to many smaller, high pLLC sub-clusters corresponding to the answer, some of which move close to addition clusters. 
