@@ -1,0 +1,272 @@
+---
+title: "The Intersection of Complexity and Fragility"
+time:
+  created: "2024-12-03T09:56:06.854Z"
+  updated: "2024-12-03T06:19:19.634Z"
+---
+
+*This post is a compendium of recent self-guided work exploring robustness, complexity, and unlearning. It begins by revisiting earlier efforts to refine the correlation between robustness and superposition, as initially posited in Toy Models of Superposition.*
+
+*In the second section, drawing on concepts from Singular Learning Theory,* **I introduce the Atomic Local Learning Coefficient (aLLC)—a novel metric for measuring model complexity at a per-input level**.  *I demonstrate its utility by using it to identify memorized datapoints in an MNIST model with over 95% accuracy. Furthermore,* **I apply the aLLC to successfully detect memorized trojans in a one-million-parameter Large Language Model.**
+
+Lastly, I detail my ongoing, ambitious work on leveraging the aLLC as a constructionist tool for discovering circuits within large models.
+
+*This post will eventually cumulate into a paper, but for now is a blog post and is not intended to be written in an overly formal manner.*
+
+
+# Toy Models Of Superposition
+Toy Models Of Superposition has a section where they show a strong correlation between the susceptibility of their toy model to adversarial attacks and the 'amount' of superposition which their model is exploiting. Their model is a simple ReLU auto-encoder $Relu(W^TWx + b)$. They calculate this 'amount' of superposition as the 'number of features per dimension', which is the reciprocal of how they defined feature dimensionality:
+
+$$
+\text{Feature Dimensionality } (D^*) = \frac{||W_{i}||^2}{\sum(\hat{W}\cdot W_{j})^2}
+$$
+
+$$
+\text{Features Per Dimension} = \frac{1}{D^*} = \frac{||W_{i}||^2}{m}.
+$$
+
+where $m$ is the number of features.
+Below is the chart from the paper (link: https://arc.net/l/quote/laarnbmf)
+<div className="mt-5"/>
+<img src="/images/adv-sup/Screenshot-2024-12-02-at-6.45.07-PM.png" alt="Correlation Chart"/>
+I think the result, although interesting and notedly preliminary, is misleading, primarily due to the setup of their toy model. My reasoning is as follows:
+
+Basically, because the toy model they use is an autoencoder, when perturbing any input feature that isn't in superposition in the hidden layer your loss won't change as the output will still match the input. On the other hand, when you change a feature that is represented in superposition, you can change the decoding of the model on other features, meaning a different input/output and a change to the L2.
+
+Concretely, because the model has only one layer, the Jacobian of the encoder will be the identity if no features are in superposition. An identity Jacobian implies no cross-feature interference (any change to a single input component won't spill over into other features). Because they use MSE, a non-identity Jacobian (resulting from superposition) is what allows a perturbation to change the loss at all.
+
+Their found correlation holds strongly because as you increase superposition you're just increasing the number of 'other' features you can change in the output, and this finding is not necessarily reflective of non-encoder models. The setup is a bit of a 'bug' for the adversarial task. Note also that while their attack $\delta  = \lambda(W^TW){i}​/∣∣(W^TW){i}∣∣_{2}$ is designed to be proportional to the attacked features dimensionality, this doesn't matter as the top chart is comparing to the *non-superposition* model, which should be completely robust if there is no noise in the weights (again because of the Jacobian argument). 
+
+Replicating their setup, this prediction holds on their model, and testing on a non-encoder model seems to show the relationship does not hold nearly as dramatically on normal models. I'll argue for this empirically below.
+
+# Empirical Evidence
+I replicated their toy model setup, training the ReLU model and using the same synthetic data setup. To induce predictable superposition, I used the same data as TMS, and manually set the first 7 features to be low importance and correlated, which does a good job encouraging the model to put them into superposition. Following the analytic method of attack detailed in the paper, $\delta  = \lambda(W^TW){i}​/∣∣(W^TW){i}∣∣_{2}$ , we can see that no feature not in superposition has the ability to significantly change the loss. 
+
+*TMS Impact of Feature Perturbations on MSE*
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/Screenshot-2024-11-26-at-9.41.36-PM-1.png" alt="Impact on MSE"/>
+
+Perturbing features not in superposition is essentially unable to impact the loss. The small amount of change for features not in superposition is likely from the tiny amount of noise left in the weights.
+Here is a visual representation of the ability of an input feature to change an output feature for a model that has features 1-7 in superposition (essentially an empirical Jacobian):
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/first7.png" alt="Empirical Jacobian"/>
+
+Plotting the average MSE with respect to feature dimensionality when analytically perturbing the input over a large number of samples, we see a strong trend where a decrease in feature 'dimensionality' results in a larger change to the MSE.
+
+*TMS Average MSE vs Feature Dimensionality*
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/p4.png" alt="MSE vs Feature Dimensionality"/>
+
+# 1 Layer ReLU MNIST Model
+
+To sanity check whether this very nice looking trend carries over to other models, I trained a non-encoder model, specifically a one layer ReLU model with 28 neurons in the hidden layer, trained on MNIST (which has 784 input features). The significant difference between hidden and input dimensions suggests the model must use superposition to represent all features. Interestingly, we see some parallel between feature dim and loss, but not to the same extent as in the encoder model. 
+
+*Effect of Analytically Perturbing Input Feature vs Feature Dimensionality (1 Layer ReLU MNIST Model)*
+<div className="mt-5"/>
+<img src="/images/adv-sup/p5.png" alt="MNIST Perturbation Effect"/>
+
+Now, to see whether *non-analytic attacks* (which perturb more than one feature) make use of this pattern we can plot feature dimensionality vs how often an analytic attack uses a feature in its attack. Naively using a common algorithm like Fast Sign Gradient Descent (FSGD) or Projected Gradient Descent (PGD) won't show this correlation because they perturb all features in the direction of the gradient, so when you average over a batch of data you end up with no correlation between $D_i$ and increase in MSE. For example, here's the average increase in MSE per feature over n samples vs feature dimensionality:
+
+*Average MSE Change Per Feature vs Feature Dimensionality*
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/FSGD_feature_change_vs_feature_dimensionality.png" alt="FSGD Attack Average Change"/>
+
+When constrained, an optimal attack would want to maximize output change per unit of perturbation. In this small model, it's reasonable to expect a constrained attack would choose to perturb features with the largest gradient norm. We can simulate this by modifying FSGD (or PGD) to only perturb along the top-k features w.r.t gradient norm. Here we see that features with lower fractional dimensionality get targeted much more often (Again on the MNIST model).
+
+*Top-K FSGD Attack Average Change Per Feature vs Feature Dimensionality*
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/Sparse_Attack_feature_change_vs_feature_dimensionality-1.png" alt="Top-K FSGD Attack Average Change"/>
+*This correlation reinforces what we would expect - features in superposition are more involved in the loss, so their gradients are naturally bigger, which leads to them being targeted more often in a Top-K attack. Note also that features which are especially useful in predicting the output should also have large gradients*
+
+
+We can also directly inspect the average perturbations over the dataset vs the feature dimensionality.
+
+*Average Perturbation and Feature Dimensionality of Input*
+<div className="mt-5"/>
+<img src="/images/adv-sup/feat_dim_over_image_vs_attack_victims.png" alt="Average Perturbation and Dimensionality"/>
+*The image on the left represents the average perturbations of 1000 different Top-K attacks. The image on the right shows the feature dimensionality for every feature in the input (a 28x28 Image)*
+
+Features in the center of the input image have a lower dimensionality. Visualizing the average perturbation per feature over a large batch, we can see, for the top-k FSGD, that these features in the center are the ones being attacked most, and also that the two graphs are ~inversely proportional.
+
+
+The feature dimensionality findings are a little confusing to me;
+Intuitively, the features in the center are used more and are more important to prediction, but following the logic from TMS, important features should be more 'orthogonal' and therefore have higher dedicated feature dimensionality. My guess is features on the edges have a higher dimensionality because they fire very rarely, and when they do fire they are very useful in predicting a memorized 'pathological' example. Even though they're useful, an attack might not target these 'memorized' features because the amount of change needed to bring the feature into 'firing' is likely large.
+When we examine the above plots for MNIST models with varying hidden sizes, we can see that as superposition increases adversarial attacks make use of more of the input in their attacks, and as superposition decreases the model doesn't use the outer edges of the input at all.
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/hm_h.png" alt="Average Perturbation and Dimensionality"/>
+*Average Adversarial Perturbations and feature dimensionality of models with different hidden sizes. As superposition decreases from left to right, total feature dimensionality increases around the edges and attacks start to exclusively target the center*
+
+# Directly Intervening on Arbitrary Features
+
+To more conclusively show that attacks are specifically targeting bits of the input in superposition, we can *directly intervene* on the dedicated dimensionality of a feature $v$ and look at the change in the average perturbation value. 
+
+Specifically, we can construct a linear transformation matrix that *increases/decreases the feature dimensionality* of a given feature by transforming the model's encoder weight matrix, $W_{1}$, then freeze the transformed weights and fine-tune the decoder back to an equivalent loss. Fine-tuning the decoder effectively re-learns the mapping from perturbed latent space to output, ensuring that downstream performance isn't artificially degraded by the adjustment. Once fine-tuned, we can then re-run our adversarial attacks and calculate the difference in average attack on the feature $v$. This determines if changing a feature's dimension changed its usefulness to an attack. We then sample this value over random features to obtain a result not dependent on feature importance.
+
+The method in more detail is as follows: 
+
+Given a feature vector $v \in \mathbb{R}^d$, we first normalize it:
+
+$$
+\hat{v} = \frac{v}{||v||}
+$$
+
+We then construct an outer product matrix $\hat{v} v^{T}$ to represent the projection of any vector onto the direction of the normalized feature vector $\hat{v}$. We define a transformation matrix $P_{\text{adjusted}}$ that adjusts the model’s weight matrix $W_1$ by either pulling it towards or pushing it away from the feature direction, controlled by a parameter $\alpha$:
+
+$$
+P_{\text{adjusted}} = I_{d} - \alpha \hat{v}v^{T}
+$$
+
+- if $\alpha < 0$, all the other feature vectors are **pulled** towards the feature vector $\hat{v}$, decreasing its feature dimensionality.
+- if $\alpha > 0$, all the other feature vectors are **pushed** away from the feature vector $\hat{v}$, increasing its feature dimensionality.
+
+The adjusted weight matrix $W_1^{\text{adjusted}}$ is then obtained by:
+
+$$
+W_1^{\text{adjusted}} = W_1 P_{\text{adjusted}}
+$$
+
+Varying $\alpha$ from -0.5 to 0.5, we observe that adversarial attacks focus more on features with lower dimensionality and less on those with higher dimensionality, regardless of feature importance. The plot is sampled over 32 random features for each $\alpha$, and each feature was attacked 100 times with 100 steps of TopK-FSGD.
+
+## Average Feature Perturbation (TopK-FSGD) vs Feature Dimensionality
+
+$$
+-0.5 \to------------- \alpha -------------\to 0.5 
+$$
+<div className="mt-5"/>
+<img src="/images/adv-sup/all_images_subplot-1.png" alt="Feature Dimensionality Intervention"/>
+<img src="/images/adv-sup/line_plot.png" alt="Perturbation Change with Alpha"/>
+
+*Images above plot are examples of feature dimensionality at the given $\alpha$ of the adjusted weight matrix $W_1^{\text{adjusted}}$. When $\alpha < 0$, the 'Average Normalized Perturbation Difference (ANPD)' goes up, indicating that adversarial attacks targeted this feature **more** often. When $\alpha = 0$, ANPD is ~0, and when $\alpha > 0$, the ANPD goes down, indicating that adversarial attacks targeted this feature **less** often.*
+
+# Thoughts
+
+Scaling to 'less toy' toy models is a target next step, ~~but I don't think any metric of 'feature' dimensionality that attempts to tie input features to output changes over multiple layers will be meaningful~~ *(NOTE: THIS IS NOT TRUE, SEE BELOW FOR SOLUTION)* so tackling this problem in a real model might look more like using targeted attacks and then mechanistically examining representation changes. Features get recombined in complicated ways in larger models, so you'd miss out on nuanced changes to representations. If attacks do exploit superposition in larger models, it's likely that a targeted attack on something like an ImageNet model wouldn't just target arbitrary interference between features but instead interference in the direction of the target, which maybe could be tested empirically.
+
+I also suspect that as you scale a model and its task, you're going to get more complicated, larger decision boundaries, and that at some point an attack will switch from exploiting just superposition to exploiting a hole in the decision boundary (as shown in *'The Space of Transferable Adversarial Examples*'). Intuitively, even in real models, attacks should still preferentially target features with lower dimensionality over those with higher dimensionality, all else being equal.
+
+What I really want to do next is train a toy model that keeps _clusters_ of features in superposition, then run targeted adversarial attacks on these clusters. The paper *'The Persian Rug: Solving Toy Models of superposition using Large-Scale Symmetries'* showed (in the toy-models-of-superposition setting) that as the number of features becomes large the interference from superposition is gaussian and basically becomes a summary statistic. I imagine that this would hold for large 'clusters' of features in superposition as well, so maybe adversarial attacks transfer because they a) exploit superposition, namely clusters that are relevant to the target, and b) the affect of an adversarial perturbation in two large enough clusters will be roughly the same because of the above.
+
+
+# *Extended Research Directions (Works in Progress)*
+*Note: The following sections represent ongoing research and preliminary results. Explanations for some terms/ideas may be strongly lacking!*
+
+# Setting Direction: 
+
+Neural networks have features that can be described as fragile if they are: 
+
+> A) _‘Easy’ to unlearn_
+
+> B) _‘Easy’ to attack in input space_
+
+> C) _‘Easy’ to attack in parameter space_
+
+These types of fragilities may be more similar than currently understood. Unlearning is when we attempt to remove a feature from a model in a manner that doesn’t harm general model behaviour. An adversarial attack is a targeted, slight perturbation to either input data or activations which causes a large (and often harmful change) to a model's output. I expect that in both cases, this ‘fragility’ (be it w.r.t to unlearning or adversarial attack) can be explained by how 'generalized' or 'memorized' a feature is, and more generally *how complex the feature's representation is*.
+
+In the superposition dogma, this follows as such: If a feature is tightly entangled with other features, it can be easily attacked because the distance to surrounding boundaries is smaller, meaning only a small perturbation is needed to sufficiently change the features meaning. On the other hand, the proverbial 'amount of work' required to unlearn a feature (while maintaining performance of other features) should be proportional to how entangled the feature is - the more entangled, the more nuanced the gradient updates have to be. 
+
+In the 'complexity' setting (an umbrella term that encompasses not just simple superposition but notions of circuitry, generalization, and memorization), I posit that more 'complex' subspaces are likely to *break* when presented with suprising input, while circuits that generalize well are more *robust* to distribution change. Functions that generalize do something more than memorization, functions that don't, don't. 
+
+We don't currently have the tools to mechanistically analyze this fragility in term
+we saw in the above sections that *features* with higher fractional dimensionality are more likely to be targeted during an adversarial attack. In the below sections, we'll look into how the fractional dimensionality of *individual data points* relates to  unlearning in a similar toy setting, and how the Local Learning Coefficient (LLC) might help us understand the relationship between complexity, robustness, and unlearning in larger models. 
+
+# Unlearning and Feature Robustness
+*Relationship Between Feature Dimensionality and Unlearning*
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/chris_olah_frac_dim.png" alt="Chris Olah's Metric of Fractional Dimensionality"/>
+
+In the Transformer Circuits post 'Superposition, Memorization, and Double Descent', Chris Olah introduced the metric of ‘Maximal Data Dimensionality’ (below). The metric is essentially the same as the 'feature dimensionality' measure we used before, except that instead of looking at how much 'room' a single feature has in representation space we find how much 'room' a datapoint has. More formally, we define maximal data dimensionality as: 
+
+$$
+\text{Data Dimensionality } (D^*_i) = sup_v \frac{(v \cdot h_i)^2}{\sum_j(v \cdot h_j)^2}
+$$
+
+This allows us to find the most 'unique' feature that a datapoint relies on. We use this metric as a starting point for measuring how the the extent to which a feature is memorized or generalized relates to the unlearning and attack of that feature: Our first experiment is on a one layer tied ReLU autoencoder trained on MNIST. We plot the data dimensionality (DD) of each input vs change in average loss under a PGD attack within a fixed eps ball. This experiment is similar to above, but instead of measuring the fractional dimensionality of individual features (pixels) of MNIST, we use the fractional dimensionality of an input image.
+
+*MMIST Unlearning $\nabla$loss vs Data Dimensionality for Single Inputs.*
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/unlearning-vs-fractiona-dimensionality.png" alt="Chris Olah's Metric of Fractional Dimensionality"/>
+
+The above image is awesome! We can see that high fractional dimensionality means an input is *harder to unlearn!*
+Empirically, I find that this near linear relation holds well for different hidden sizes and is pretty 'robust' to different unlearning schemes. 
+
+# Why The Local Learning Coefficient
+
+The LLC measures *model complexity* by looking at how the volume of viable solutions scales in parameter space around a specific point, and is generally a very well theoretically motivated measure. The LLC is defined as:
+
+$$
+\hat{\lambda}(\hat{w}^*) = \frac{E_{\beta^*_{w|\hat{w}^*}}[nL_n(w)] - nL_n(\hat{w}^*)}{\log n}
+$$
+
+Don't let the notation scare you - what we're doing here is sampling from models adjacent to our current parameters ($E_{w|\hat{w}^*}$) and seeing how quickly the loss changes. We do this sampling using Stochastic gradient Langevin dynamics, which is gradient descent with some carefully added noise:
+
+We calculate this by sampling around our current parameters using SGLD, which adds carefully scaled noise to gradient descent:
+$$
+w_{t+1} = w_t - \epsilon\nabla L(w_t) + \sqrt{2\epsilon}\eta_t, \quad \eta_t \sim \mathcal{N}(0,1)
+$$
+The LLC emerges from Watanabe's free energy formula:
+$$
+F_n \to nL_n(w^*) + \lambda\log n + O(\log\log n) \text{ as } n \to \infty
+$$
+
+High LLC values indicate complex solutions requiring precise parameters, and low values suggest simpler, more degenerate solutions with more flexibility in parameter space (more degeneracy). 
+
+Most work currently being done with the LLC is focused on tracking the LLC as a model learns, falling under the header 'Developmental Interpretability'. The most intriguing thing the LLC lets us track is *phase transitions* in models, not unlike those found in the Toy Models of Superposition, but again, an umbrella over what superposition can tell us. Armed with this new measure of complexity, we can tackle the dynamics of robustness and complexity in models much larger than the toy one layer models in the main section of this post. 
+
+*An introduction to *why* the LLC vs other measures of model complexity can be found [here](https://www.lesswrong.com/posts/6g8cAftfQufLmFDYT/you-re-measuring-model-complexity-wrong).*
+
+# Why *NOT* The Local Learning Coefficient
+
+Recall that the LLC is computed by first sampling adjacent models using  (SGLD), and then evaluating the average loss of all of these models. This allows us to estimate how the *volume* of models which do a decent job at solving our task scales. 
+
+Unfortunately, the LLC, as is, is not going to be able to help us too much. We want information on how complex *small groups of inputs* are, because otherwise we can't do the fine-grained analysis we need for comparing to our metris of 'fragility'. To illustrate this issue more clearly, you can imagine that if we take a model trained to predict MNIST digits 1-9, then chart it's parameter space wrt to loss on a *single* digit, we'll suddenly no longer need the majority of our parameters that were dedicated to classifying all the other digits. The LLC will then become *negative*, as we're actually at a dramatically *too* complex point in parameter space, and all directions slope downwards.
+
+To illustrate, we can plot the LLC of a MNIST model as we shift the percentage of our dataset from being equally representative of all parameters to just being made up of a single example. 
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/LLC_bad.png" alt="LLC bad"/>
+*This plot shows how the local learning coefficient changes as we increase the representation of a single digit in our dataset. We see the LLC becomes un-physically negative as we approach 95%+ of our dataset being comprised of one label.* 
+
+Thankfully, being the handy engineers we are, with a bit of work we can modify the LLC sampler to *traverse the posterior over distribution A*, while *calculating expected losses on examples from distribution B*. This essentially allows us to track of the losses on *each individual input* as we sample around model space with SGLD. This gives us the tools we need to estimate the 'LLC' of a single input - the average change in loss from our starting point during sampling. From here on out, we'll call this new per-input-LLC the *atomic LLC*, and refer to it as the aLLC. 
+
+
+This is an interesting expansion on the metric - firstly, we get a metric useful for measuring the 'complexity' of single inputs, something we didn't have before. Secondly, and possibly more powerfully, _it allows us to analyze the correlations between how different inputs behave as we wander around parameter space_. If we find that a particular set of inputs seem to be strongly correlated, it's likely these inputs *rely on the same types of circuits*. This (should be) a powerfull new way to do mech interp and discover new circuitry - we not only unlock a bunch of new statistics about inputs that share circuitry, we also have access to sets of *models* which do/don't share this circuitry. Think of the possibilities! 
+
+For example, it turns out if we do this vectorize each loss trace and plot a tSNE, we can readily recover different our different MNSIT classes. 
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/mnist_aLLC_trace_clustering_64_hidden.png" alt="Initial Loss vs aLLC for MNIST model"/>
+
+# Scaling Mechanistic Detection of Memorization
+
+The first thing we can do to check if our aLLC is telling us something meaningful is to check what it does on examples we *know* to be memorized. This will eventually lead us to a particularly beautiful graph (and result), which shows us that the trace decomposition is doing more than just fooling us by reflecting the data. To obtain this lovely plot, we train a model on MNIST with 10% of the labels randomly changed. With enough training, the model will eventually *memorize these points*. We train the model until we get good performance on both incorrectly and correctly labeled inputs. We then take the model and calculate the *Atomic Local Learning Coefficient* for each input, and finally we decompose the trace of each aLLC as discussed above and plot with tSNE. 
+
+The tSNE shows clearly that the traces of memorized examples cluster together tightly. Additionally, using a simple logitistic regression on the traces, we can detect memorized examples with >95% overall accuracy and 82% precision - meaning we're not only extremely accurate overall, but when we flag something as memorized, we're right over 4 out of 5 times. This means that *we can mechanistically detect when the model has memorized an input*. Intuitively, this is because memorization is a *weak* form of learning - if your model changes even just a little it's likely to accidentally 'forget' something it just memorized, and therefore the trace of a memorized input will behaves very differently than a generalized input. Generalization, on the other hand, is the result of *circuitry* - circuitry that doesn't easily dissapear when nudging the model slightly. 
+
+To get slightly more technical, this is because of the way the tempered posterior (the parameter space SGLD walks around) behaves. The word 'temp - ered' refereres to *temperature*, and the *tempered posterior* allows us to controls how much SGLD values low vs high impact model internal wrt loss. A low temperature doesn't care that much about noising out 'memorized' facts from a model, as on average memorized examples matter less to the loss than remembering how to, say, do induction. 
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/memorized_labels_mnsit_llc_trace.png" alt="Initial Loss vs aLLC for MNIST model"/>
+*tSNE of the aLLC traces of a model trained on MNIST with 10% of inputs randomly mislabeled. Red points indicate randomly labeled datapoints and blue points indicate regular datapoints. The model is forced to memorize the mislabeled points*
+
+Because of the theoretical robustness of the LLC, we can quite confidently scale this metric to larger models. While still a work in progress, we can do the same tSNE visualization on the LLC traces of sequence inputs to a pretrained 1m-Tiny-Stories Transformer: 
+
+<div className="mt-5"/>
+<img src="/images/adv-sup/isle-of-timmy.png" alt="Chris Olah's Metric of Fractional Dimensionality"/>
+*tSNE of aLLC traces of a 1 million parameter Transformer trained on tiny-stories. Highlighted points are inputs which contain the word 'Timmy'!*
+
+The points are surprisingly very semantically coherent! The above plot has the 'Isle-of-Timmy' highlighted: all red dots contain the name ‘timmy’ in them. Manual inspection shows similar areas corresponding to different names, but more generally also shows regions seemingly about ‘cooking food’, ‘eating food’, 'cars', ‘Stories that start with "Once Upon a Time"’. The big ‘island’ in the bottom right is almost completely examples which have two names at the start instead of one, like “Anna and Tom”. (Other points also use induction, so it’s not an ‘induction’ circuit island unfortunately). 
+
+We can expand on our inital MNIST memorization experiment and at
+
+tSNE will only take you so far - there are more powerful methods we can apply to find the hidden commonalities of the data from our traces (think sparse autoencoders).
+
+*More on how we can use this metric to do all kinds of fantastical things coming soon! (Hopefully a paper)*
+

@@ -1,18 +1,9 @@
 ---
-title: "The Intersection of Complexity and Fragility"
+title: "Issues with TMS' Fractional Dimensionality"
 time:
   created: "2024-12-03T09:56:06.854Z"
   updated: "2024-12-03T06:19:19.634Z"
 ---
-
-*This post is a compendium of recent self-guided work exploring robustness, complexity, and unlearning. It begins by revisiting earlier efforts to refine the correlation between robustness and superposition, as initially posited in Toy Models of Superposition.*
-
-*In the second section, drawing on concepts from Singular Learning Theory,* **I introduce the Atomic Local Learning Coefficient (aLLC)—a novel metric for measuring model complexity at a per-input level**.  *I demonstrate its utility by using it to identify memorized datapoints in an MNIST model with over 95% accuracy. Furthermore,* **I apply the aLLC to successfully detect memorized trojans in a one-million-parameter Large Language Model.**
-
-Lastly, I detail my ongoing, ambitious work on leveraging the aLLC as a constructionist tool for discovering circuits within large models.
-
-*This post will eventually cumulate into a paper, but for now is a blog post and is not intended to be written in an overly formal manner.*
-
 
 # Toy Models Of Superposition
 Toy Models Of Superposition has a section where they show a strong correlation between the susceptibility of their toy model to adversarial attacks and the 'amount' of superposition which their model is exploiting. Their model is a simple ReLU auto-encoder $Relu(W^TWx + b)$. They calculate this 'amount' of superposition as the 'number of features per dimension', which is the reciprocal of how they defined feature dimensionality:
@@ -146,127 +137,9 @@ $$
 
 # Thoughts
 
-Scaling to 'less toy' toy models is a target next step, ~~but I don't think any metric of 'feature' dimensionality that attempts to tie input features to output changes over multiple layers will be meaningful~~ *(NOTE: THIS IS NOT TRUE, SEE BELOW FOR SOLUTION)* so tackling this problem in a real model might look more like using targeted attacks and then mechanistically examining representation changes. Features get recombined in complicated ways in larger models, so you'd miss out on nuanced changes to representations. If attacks do exploit superposition in larger models, it's likely that a targeted attack on something like an ImageNet model wouldn't just target arbitrary interference between features but instead interference in the direction of the target, which maybe could be tested empirically.
+Scaling to 'less toy' toy models is a target next step, ~~but I don't think any metric of 'feature' dimensionality that attempts to tie input features to output changes over multiple layers will be meaningful~~ *(NOTE: my more recent post 'Interpreting Complexity' made a good start towards solving this using SLT)* so tackling this problem in a real model might look more like using targeted attacks and then mechanistically examining representation changes. Features get recombined in complicated ways in larger models, so you'd miss out on nuanced changes to representations. If attacks do exploit superposition in larger models, it's likely that a targeted attack on something like an ImageNet model wouldn't just target arbitrary interference between features but instead interference in the direction of the target, which maybe could be tested empirically.
 
 I also suspect that as you scale a model and its task, you're going to get more complicated, larger decision boundaries, and that at some point an attack will switch from exploiting just superposition to exploiting a hole in the decision boundary (as shown in *'The Space of Transferable Adversarial Examples*'). Intuitively, even in real models, attacks should still preferentially target features with lower dimensionality over those with higher dimensionality, all else being equal.
 
 What I really want to do next is train a toy model that keeps _clusters_ of features in superposition, then run targeted adversarial attacks on these clusters. The paper *'The Persian Rug: Solving Toy Models of superposition using Large-Scale Symmetries'* showed (in the toy-models-of-superposition setting) that as the number of features becomes large the interference from superposition is gaussian and basically becomes a summary statistic. I imagine that this would hold for large 'clusters' of features in superposition as well, so maybe adversarial attacks transfer because they a) exploit superposition, namely clusters that are relevant to the target, and b) the affect of an adversarial perturbation in two large enough clusters will be roughly the same because of the above.
-
-
-# *Extended Research Directions (Works in Progress)*
-*Note: The following sections represent ongoing research and preliminary results. Explanations for some terms/ideas may be strongly lacking!*
-
-# Setting Direction: 
-
-Neural networks have features that can be described as fragile if they are: 
-
-> A) _‘Easy’ to unlearn_
-
-> B) _‘Easy’ to attack in input space_
-
-> C) _‘Easy’ to attack in parameter space_
-
-These types of fragilities may be more similar than currently understood. Unlearning is when we attempt to remove a feature from a model in a manner that doesn’t harm general model behaviour. An adversarial attack is a targeted, slight perturbation to either input data or activations which causes a large (and often harmful change) to a model's output. I expect that in both cases, this ‘fragility’ (be it w.r.t to unlearning or adversarial attack) can be explained by how 'generalized' or 'memorized' a feature is, and more generally *how complex the feature's representation is*.
-
-In the superposition dogma, this follows as such: If a feature is tightly entangled with other features, it can be easily attacked because the distance to surrounding boundaries is smaller, meaning only a small perturbation is needed to sufficiently change the features meaning. On the other hand, the proverbial 'amount of work' required to unlearn a feature (while maintaining performance of other features) should be proportional to how entangled the feature is - the more entangled, the more nuanced the gradient updates have to be. 
-
-In the 'complexity' setting (an umbrella term that encompasses not just simple superposition but notions of circuitry, generalization, and memorization), I posit that more 'complex' subspaces are likely to *break* when presented with suprising input, while circuits that generalize well are more *robust* to distribution change. Functions that generalize do something more than memorization, functions that don't, don't. 
-
-We don't currently have the tools to mechanistically analyze this fragility in term
-we saw in the above sections that *features* with higher fractional dimensionality are more likely to be targeted during an adversarial attack. In the below sections, we'll look into how the fractional dimensionality of *individual data points* relates to  unlearning in a similar toy setting, and how the Local Learning Coefficient (LLC) might help us understand the relationship between complexity, robustness, and unlearning in larger models. 
-
-# Unlearning and Feature Robustness
-*Relationship Between Feature Dimensionality and Unlearning*
-
-<div className="mt-5"/>
-<img src="/images/adv-sup/chris_olah_frac_dim.png" alt="Chris Olah's Metric of Fractional Dimensionality"/>
-
-In the Transformer Circuits post 'Superposition, Memorization, and Double Descent', Chris Olah introduced the metric of ‘Maximal Data Dimensionality’ (below). The metric is essentially the same as the 'feature dimensionality' measure we used before, except that instead of looking at how much 'room' a single feature has in representation space we find how much 'room' a datapoint has. More formally, we define maximal data dimensionality as: 
-
-$$
-\text{Data Dimensionality } (D^*_i) = sup_v \frac{(v \cdot h_i)^2}{\sum_j(v \cdot h_j)^2}
-$$
-
-This allows us to find the most 'unique' feature that a datapoint relies on. We use this metric as a starting point for measuring how the the extent to which a feature is memorized or generalized relates to the unlearning and attack of that feature: Our first experiment is on a one layer tied ReLU autoencoder trained on MNIST. We plot the data dimensionality (DD) of each input vs change in average loss under a PGD attack within a fixed eps ball. This experiment is similar to above, but instead of measuring the fractional dimensionality of individual features (pixels) of MNIST, we use the fractional dimensionality of an input image.
-
-*MMIST Unlearning $\nabla$loss vs Data Dimensionality for Single Inputs.*
-
-<div className="mt-5"/>
-<img src="/images/adv-sup/unlearning-vs-fractiona-dimensionality.png" alt="Chris Olah's Metric of Fractional Dimensionality"/>
-
-The above image is awesome! We can see that high fractional dimensionality means an input is *harder to unlearn!*
-Empirically, I find that this near linear relation holds well for different hidden sizes and is pretty 'robust' to different unlearning schemes. 
-
-# Why The Local Learning Coefficient
-
-The LLC measures *model complexity* by looking at how the volume of viable solutions scales in parameter space around a specific point, and is generally a very well theoretically motivated measure. The LLC is defined as:
-
-$$
-\hat{\lambda}(\hat{w}^*) = \frac{E_{\beta^*_{w|\hat{w}^*}}[nL_n(w)] - nL_n(\hat{w}^*)}{\log n}
-$$
-
-Don't let the notation scare you - what we're doing here is sampling from models adjacent to our current parameters ($E_{w|\hat{w}^*}$) and seeing how quickly the loss changes. We do this sampling using Stochastic gradient Langevin dynamics, which is gradient descent with some carefully added noise:
-
-We calculate this by sampling around our current parameters using SGLD, which adds carefully scaled noise to gradient descent:
-$$
-w_{t+1} = w_t - \epsilon\nabla L(w_t) + \sqrt{2\epsilon}\eta_t, \quad \eta_t \sim \mathcal{N}(0,1)
-$$
-The LLC emerges from Watanabe's free energy formula:
-$$
-F_n \to nL_n(w^*) + \lambda\log n + O(\log\log n) \text{ as } n \to \infty
-$$
-
-High LLC values indicate complex solutions requiring precise parameters, and low values suggest simpler, more degenerate solutions with more flexibility in parameter space (more degeneracy). 
-
-Most work currently being done with the LLC is focused on tracking the LLC as a model learns, falling under the header 'Developmental Interpretability'. The most intriguing thing the LLC lets us track is *phase transitions* in models, not unlike those found in the Toy Models of Superposition, but again, an umbrella over what superposition can tell us. Armed with this new measure of complexity, we can tackle the dynamics of robustness and complexity in models much larger than the toy one layer models in the main section of this post. 
-
-*An introduction to *why* the LLC vs other measures of model complexity can be found [here](https://www.lesswrong.com/posts/6g8cAftfQufLmFDYT/you-re-measuring-model-complexity-wrong).*
-
-# Why *NOT* The Local Learning Coefficient
-
-Recall that the LLC is computed by first sampling adjacent models using  (SGLD), and then evaluating the average loss of all of these models. This allows us to estimate how the *volume* of models which do a decent job at solving our task scales. 
-
-Unfortunately, the LLC, as is, is not going to be able to help us too much. We want information on how complex *small groups of inputs* are, because otherwise we can't do the fine-grained analysis we need for comparing to our metris of 'fragility'. To illustrate this issue more clearly, you can imagine that if we take a model trained to predict MNIST digits 1-9, then chart it's parameter space wrt to loss on a *single* digit, we'll suddenly no longer need the majority of our parameters that were dedicated to classifying all the other digits. The LLC will then become *negative*, as we're actually at a dramatically *too* complex point in parameter space, and all directions slope downwards.
-
-To illustrate, we can plot the LLC of a MNIST model as we shift the percentage of our dataset from being equally representative of all parameters to just being made up of a single example. 
-
-<div className="mt-5"/>
-<img src="/images/adv-sup/LLC_bad.png" alt="LLC bad"/>
-*This plot shows how the local learning coefficient changes as we increase the representation of a single digit in our dataset. We see the LLC becomes un-physically negative as we approach 95%+ of our dataset being comprised of one label.* 
-
-Thankfully, being the handy engineers we are, with a bit of work we can modify the LLC sampler to *traverse the posterior over distribution A*, while *calculating expected losses on examples from distribution B*. This essentially allows us to track of the losses on *each individual input* as we sample around model space with SGLD. This gives us the tools we need to estimate the 'LLC' of a single input - the average change in loss from our starting point during sampling. From here on out, we'll call this new per-input-LLC the *atomic LLC*, and refer to it as the aLLC. 
-
-
-This is an interesting expansion on the metric - firstly, we get a metric useful for measuring the 'complexity' of single inputs, something we didn't have before. Secondly, and possibly more powerfully, _it allows us to analyze the correlations between how different inputs behave as we wander around parameter space_. If we find that a particular set of inputs seem to be strongly correlated, it's likely these inputs *rely on the same types of circuits*. This (should be) a powerfull new way to do mech interp and discover new circuitry - we not only unlock a bunch of new statistics about inputs that share circuitry, we also have access to sets of *models* which do/don't share this circuitry. Think of the possibilities! 
-
-For example, it turns out if we do this vectorize each loss trace and plot a tSNE, we can readily recover different our different MNSIT classes. 
-
-<div className="mt-5"/>
-<img src="/images/adv-sup/mnist_aLLC_trace_clustering_64_hidden.png" alt="Initial Loss vs aLLC for MNIST model"/>
-
-# Scaling Mechanistic Detection of Memorization
-
-The first thing we can do to check if our aLLC is telling us something meaningful is to check what it does on examples we *know* to be memorized. This will eventually lead us to a particularly beautiful graph (and result), which shows us that the trace decomposition is doing more than just fooling us by reflecting the data. To obtain this lovely plot, we train a model on MNIST with 10% of the labels randomly changed. With enough training, the model will eventually *memorize these points*. We train the model until we get good performance on both incorrectly and correctly labeled inputs. We then take the model and calculate the *Atomic Local Learning Coefficient* for each input, and finally we decompose the trace of each aLLC as discussed above and plot with tSNE. 
-
-The tSNE shows clearly that the traces of memorized examples cluster together tightly. Additionally, using a simple logitistic regression on the traces, we can detect memorized examples with >95% overall accuracy and 82% precision - meaning we're not only extremely accurate overall, but when we flag something as memorized, we're right over 4 out of 5 times. This means that *we can mechanistically detect when the model has memorized an input*. Intuitively, this is because memorization is a *weak* form of learning - if your model changes even just a little it's likely to accidentally 'forget' something it just memorized, and therefore the trace of a memorized input will behaves very differently than a generalized input. Generalization, on the other hand, is the result of *circuitry* - circuitry that doesn't easily dissapear when nudging the model slightly. 
-
-To get slightly more technical, this is because of the way the tempered posterior (the parameter space SGLD walks around) behaves. The word 'temp - ered' refereres to *temperature*, and the *tempered posterior* allows us to controls how much SGLD values low vs high impact model internal wrt loss. A low temperature doesn't care that much about noising out 'memorized' facts from a model, as on average memorized examples matter less to the loss than remembering how to, say, do induction. 
-
-<div className="mt-5"/>
-<img src="/images/adv-sup/memorized_labels_mnsit_llc_trace.png" alt="Initial Loss vs aLLC for MNIST model"/>
-*tSNE of the aLLC traces of a model trained on MNIST with 10% of inputs randomly mislabeled. Red points indicate randomly labeled datapoints and blue points indicate regular datapoints. The model is forced to memorize the mislabeled points*
-
-Because of the theoretical robustness of the LLC, we can quite confidently scale this metric to larger models. While still a work in progress, we can do the same tSNE visualization on the LLC traces of sequence inputs to a pretrained 1m-Tiny-Stories Transformer: 
-
-<div className="mt-5"/>
-<img src="/images/adv-sup/isle-of-timmy.png" alt="Chris Olah's Metric of Fractional Dimensionality"/>
-*tSNE of aLLC traces of a 1 million parameter Transformer trained on tiny-stories. Highlighted points are inputs which contain the word 'Timmy'!*
-
-The points are surprisingly very semantically coherent! The above plot has the 'Isle-of-Timmy' highlighted: all red dots contain the name ‘timmy’ in them. Manual inspection shows similar areas corresponding to different names, but more generally also shows regions seemingly about ‘cooking food’, ‘eating food’, 'cars', ‘Stories that start with "Once Upon a Time"’. The big ‘island’ in the bottom right is almost completely examples which have two names at the start instead of one, like “Anna and Tom”. (Other points also use induction, so it’s not an ‘induction’ circuit island unfortunately). 
-
-We can expand on our inital MNIST memorization experiment and at
-
-tSNE will only take you so far - there are more powerful methods we can apply to find the hidden commonalities of the data from our traces (think sparse autoencoders).
-
-*More on how we can use this metric to do all kinds of fantastical things coming soon! (Hopefully a paper)*
 
