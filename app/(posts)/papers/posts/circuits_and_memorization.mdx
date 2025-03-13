@@ -90,7 +90,7 @@ Neural networks, however, are singular - many directions in parameter space have
 
 # Why Volume Scaling Matters
 
-Let's take a step back and revist our little parameter's journey. We can imagine our parameter as having set out with the goal of ending up somewhere within an area $X$ in parameter space. Let's also imagine that our parameter is going to travel to $X$ via cannon. The smaller $X$, the more precise the instructions Mr. Parameter needs to give to the cannon operator to ensure everything is set at precisely the right angle. As $X$ shrinks, it becomes *less* likely our parameter is to end up safe and sound. If our parameter frustrated the operator with too many decimal places and was launched into parameter space at random, it's unlikely he would end up in the right spot. 
+Let's take a step back and revisit our little parameter's journey. We can imagine our parameter as having set out with the goal of ending up somewhere within an area $X$ in parameter space. Let's also imagine that our parameter is going to travel to $X$ via cannon. The smaller $X$, the more precise the instructions Mr. Parameter needs to give to the cannon operator to ensure everything is set at precisely the right angle. As $X$ shrinks, it becomes *less* likely our parameter is to end up safe and sound. If our parameter frustrated the operator with too many decimal places and was launched into parameter space at random, it's unlikely he would end up in the right spot. 
 
 Solutions that require extreme precision in parameter space are inherently more brittle. When the volume of viable solutions (our $X$) is small, finding and maintaining that solution requires an extraordinary degree of specification. 
 
@@ -238,7 +238,7 @@ Other techniques for that capture per-input complexity on MNIST scale include [N
 
 In [Superposition, Memorization, and Double Descent](https://transformer-circuits.pub/2023/toy-double-descent/index.html), Henighan et al. (2023) studied memorization in the superposition regime, showing how dataset size affects model representations. In a [footnote](https://arc.net/l/quote/wkzawsnc), Chris Olah introduced *fractional data dimensionality*, a metric quantifying how many independent feature directions a single data point occupies within a learned representation. Unlike curvature-based approaches, this method provides a direct view of representation complexity. However, its applicability remains limited, as it has only been demonstrated in toy settings where superposition properties can be explicitly measured in a single-layer model. 
 
-Collecting 1000-step pLLC traces for 3,000 inputs takes ~30 seconds on a standard Macbook. To our knowledge, there doesn't appear to be a clear example of an easy-to-estimate per-input 'complexity' metric which captures a nuanced spectrum of complexity in the way we've demonstrated the pLLC can.
+Collecting 1000-step pLLC traces for 3,000 inputs takes ~30 seconds on a standard MacBook. To our knowledge, there doesn't appear to be a clear example of an easy-to-estimate per-input 'complexity' metric which captures a nuanced spectrum of complexity in the way we've demonstrated the pLLC can.
 
 
 # Beyond Averages
@@ -275,7 +275,7 @@ What are the defining differences in how memorized points and normal points beha
 The human eye is astonishingly good at picking out patterns from noise. In our case, the pattern *is* noise.
 As we decrease temperature, we increase the uniformity with which we noise out our memorized points. 
 
-We visualize the pattern of degradation for both memorized and normal points via heatmap. In order to properly visualize *patterns* of degradation and avoid observing simple differences in the magnitude of the loss at each step, we normalize each trace with L2 normalization before clustering, which we find alters the shape of our tSNE clusters by centring the memorization cluster (displayed above each heatmap). 
+We visualize the pattern of degradation for both memorized and normal points via heatmap. In order to properly visualize *patterns* of degradation and avoid observing simple differences in the magnitude of the loss at each step, we normalize each trace with L2 normalization before clustering, which we find alters the shape of our tSNE clusters by centering the memorization cluster (displayed above each heatmap). 
 
 This plot shows how losses change for both memorized and normal points over the course of sampling with SGLD. Each row of the heatmap is a single pLLC trace (change in losses for a single input), where the columns are each a step of SGLD. 
 
@@ -353,7 +353,7 @@ The below plot is a tSNE of the pLLC traces taken from our model, coloured by ta
 There's a lot going on in the above plot: 
 * Inputs cluster by task, within which they cluster by answer. 
 * There are two clusters involving zero; A cluster where all the inputs are __multiplication with zero and a two-digit number__ (two-digit numbers are exclusive to the multiplication task), and a cluster where all the inputs are __multiplication with zero and a one-digit number__
-* Each small by-answer addition cluster contains within it multiplication inputs where both inputs are single digit. Notably all the mulitplication inputs which fit this description cluster within an addition cluster.
+* Each small by-answer addition cluster contains within it multiplication inputs where both inputs are single digit. Notably all the multplication inputs which fit this description cluster within an addition cluster.
 * Finally, we have a large multiplication-only cluster that contains all multiplication inputs with an answer >= 10 or either input having two digits. 
 
 But wait! We still have a simple scalar metric which we are claiming tells us about complexity. What's that saying here? 
@@ -506,7 +506,7 @@ Finally, an incomplete list of some good next steps for the pLLC:
   * Can we train sparse-autoencoders on our traces? (Is our model a linear combination of 'behaviours')? 
 
 ### Larger scale experiments
-  * To what extent can we detect more subtle memorization patterns? Setups like those from Anthropics [sleeper agent](https://arxiv.org/pdf/2401.05566) paper or the [Emergent Misalignment](https://arxiv.org/pdf/2502.17424) paper could be interesting, although even if the pLLC does work to flag these trojans it may not be immediately useful. 
+  * To what extent can we detect more subtle memorization patterns? Setups like those from Anthropic's [sleeper agent](https://arxiv.org/pdf/2401.05566) paper or the [Emergent Misalignment](https://arxiv.org/pdf/2502.17424) paper could be interesting, although even if the pLLC does work to flag these trojans it may not be immediately useful. 
   * What does the pLLC distribution look like for large models? Is it as interpretable as the MNSIT case? 
 ### Work using the pLLC to investigate the relationship between unlearning and robustness
   * Are inputs with low pLLC easier to unlearn? Can we use a before/after comparison of the pLLC as a canary for how effectively some set of inputs was unlearned? 
@@ -682,6 +682,8 @@ For our memorized point $p$, the loss is constant as long as $\epsilon$ is posit
 For all other points, loss decreases as $\epsilon \to 0$, as fewer points incorrectly fall within the window created by our biases. 
 
 But our model has a large, *discrete* jump in the loss as soon as $\epsilon$ becomes negative! Roughly, we can say the loss *scales sharply* in our memorization direction ('memorization direction' because our model also improves as $\epsilon \to 0$).
+
+Note: *Because our ReLU gives us a discontinuous jump in the loss when $0 \notin [x-(p+\epsilon), x-(p-\epsilon)]$, we can easily use bits to specify the range of values $b_1$ and $b_2$ for which our model achieves a certain accuracy. Consider that each bias $b_i$ must lie within an interval of width $\epsilon$. If we store $b_i$ in binary with $B$ bits of precision, the smallest resolvable increment is $2^{-B}$. To ensure we fall within our narrow interval $[b_i^*,\, b_i^* + \epsilon]$, we need: $2^{-B} \le \epsilon \quad\Longrightarrow\quad B \ge \log_2 \bigl(\tfrac{1}{\epsilon}\bigr)$. So the number of bits needed just for one bias grows like $\log_2(\tfrac{1}{\epsilon})$ as $\epsilon \to 0$. This trade off between precision and accuracy actually hints at a deeper connection between precision and the learning coefficient - by definition, the sharper our solution basin, the more bits we need to specify a parameter that performs sufficiently well on our task.
 
 Notably, the gradient at $\epsilon$ might be small, so a naive per-sample gradient method (NTK, etc) wouldn't detect this sharp transition. However, moving in the same direction that improves the loss on $P$ eventually flips and causes a sharp performance drop.
 
