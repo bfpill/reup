@@ -51,7 +51,7 @@ Singular Learning Theory (SLT) is based around the idea of 'degenerate' function
 
 *The next sections will introduce some basic SLT concepts. If you're already familiar with SLT's main ideas feel free to skip down to 'The Per-Sample LLC, or (p)LLC'*
 
-# A Parameters Journey Through Function Space
+# A Parameter's Journey Through Function Space
 
 From here on out it will be useful to think of our parameter $\theta$ as a point living in a space. We'll call this (often high dimensional space) 'parameter space'.
 
@@ -461,7 +461,7 @@ In practice, we believe that this means temperature __controls the 'efficiency' 
 
 Physics is built on layer upon layer of abstraction - you can talk about fluid dynamics without knowing anything about individual $H_2O$ molecules. We care about rules that govern systems at different levels, and particularly how 'particles' interact at different scales. The description of a system changing depending on the scale at which you observe it is called [*Renormalization*](https://en.wikipedia.org/wiki/Renormalization#:~:text=Renormalization%20is%20a%20collection%20of,effects%20of%20their%20self%2Dinteractions).
 
-We've saw qualitatively different clustering at different temperatures in the MNIST and modular arithmetic experiments. For us, tuning the temperature allows us to observe structure at different scales - we'd like to think that different temperatures can be thought of as revealing progressive levels of 'abstraction'. For example, at low temperatures,
+We've saw qualitatively different clustering at different temperatures in the MNIST and modular arithmetic experiments. For us, tuning the temperature allows us to observe structure at different scales - we'd like to think that different temperatures can be thought of as revealing progressive levels of 'abstraction'.
 
 
 # What This Might Mean in Circuit-Land
@@ -500,8 +500,13 @@ Finally, an incomplete list of some good next steps for the pLLC:
     * Can we combine data from different temperatures into one cluster? 
   * Can we come up with a formal 'distance' metric that tells us how 'similarly' a model treats two inputs, at varying scales of temperature renormalization? 
   * What is the best way to think about the pLLC's relation to influence functions? 
-### Larger scale anomaly detection experiments
-  * To what extent can we detect more subtle memorization patterns? 
+  * Can we find examples of clusters which correspond to circuits we already know exist, e.g. induction heads?
+  * Can we do experiments where we 'ablate' circuits and observe the presence of clusters? 
+  * Can we extend pLLC traces to use logit values instead of loss? 
+  * Can we train sparse-autoencoders on our traces? (Is our model a linear combination of 'behaviours')? 
+
+### Larger scale experiments
+  * To what extent can we detect more subtle memorization patterns? Setups like those from Anthropics [sleeper agent](https://arxiv.org/pdf/2401.05566) paper or the [Emergent Misalignment](https://arxiv.org/pdf/2502.17424) paper could be interesting, although even if the pLLC does work to flag these trojans it may not be immediately useful. 
   * What does the pLLC distribution look like for large models? Is it as interpretable as the MNSIT case? 
 ### Work using the pLLC to investigate the relationship between unlearning and robustness
   * Are inputs with low pLLC easier to unlearn? Can we use a before/after comparison of the pLLC as a canary for how effectively some set of inputs was unlearned? 
@@ -509,7 +514,7 @@ Finally, an incomplete list of some good next steps for the pLLC:
 
 * Work looking at the transition between memorization and generalization regimes in a simple grokking model using the pLLC
 * Work exploring more methods of visualizing SGLD traces and the geometry of the loss landscape
-* Work using pLLC traces to validate a SGLD hyperparams are 'correct' and doing what we expect. 
+* Work using pLLC traces to validate a set of SGLD hyperparams as 'correct' and doing what we expect. 
 
 
 <div className='mt-[250px]'/>
