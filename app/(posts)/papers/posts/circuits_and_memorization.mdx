@@ -40,7 +40,7 @@ Meanwhile, the field of model interpretability has developed techniques focusing
 
 We take the core SLT technique, Local Learning Coefficient (LLC) estimation, and: 
   1. Extend it to handle single input in order to accurately measure per-input complexity. This allows us to derive a scalar metric of complexity which we show __intuitively corresponds to complexity in the MNIST setting__ and which also allows us to __flag trojan inputs which a Large Language Model has memorized__. 
-  2. We introduce a new vector-based technique for studying model internals using shared patterns of degradation between inputs during local sampling from the posterior with Stochastic Langevin Gradient Descent (SLGD). 
+  2. We introduce a new vector-based technique for studying model internals using shared patterns of degradation between inputs during local sampling from the posterior with [Stochastic Langevin Gradient Descent](https://en.wikipedia.org/wiki/Stochastic_gradient_Langevin_dynamics) (SLGD). 
   
 We then use these techniques to study the internal structure of a Transformer trained to do both modular addition and modular multiplication, and we find __interpretable structure__ at multiple temperature scales, which we argue acts to 'renormalize' observed model structure.
 
@@ -130,9 +130,9 @@ L(w) = (w^* - w)^{2k},
 $$
 then $$\Delta w \sim \epsilon^{1/(2k)}$$ and hence
 $$
-V(\epsilon) \propto \epsilon^{1/(2k)}.
+V(\epsilon) \propto \epsilon^{1/(2k)},
 $$
-The learning coefficient is then $$\lambda = 1/(2k)$$.
+where $$\lambda = 1/(2k)$$.
 
 These examples capture the key idea: the flatter the basin our parameter $\theta$ sits in, the more the effective 'dimensionality' of the loss landscape is reduced. Even though the parameter space is high-dimensional, the "volume" of near-optimal parameters behaves as if the space were lower-dimensional.
 
@@ -443,26 +443,27 @@ At high temperatures, there is no strong pattern to the table, but as the temper
 
 # But How? - *Temperature*
 
-We present a __potential explanation__ for why we seem to be seeing different things at different temperatures, and what this might mean. Let's start with a couple of intuition bumps:
+Why these curiously different artifacts at different temperatures? Should we expect a change in temperature to change our measurements in a meaningful way? We present a __potential explanation__ for why we seem to be seeing different things at different temperatures, and what this might mean. Let's start with a couple of intuition bumps:
 
-Firstly, a behaviour is *memorization-like* if it only improves the loss on a *small number* of inputs (or a single input). A behaviour is *generalization-like* if it benefits *many* inputs. 
-
-For example, imagine you were given our MNIST model and were tasked with randomly noising out as many parameters (weight/biases/etc) as possible while keeping the model above a certain performance, $P$. 
+Imagine you were given our MNIST model and were tasked with randomly noising out as many parameters (weight/biases/etc) as possible while keeping the model above a certain performance, $P$. 
 
 A good first strategy would be ranking the parameters by *their overall contribution to the loss*, then iteratively noising out the least impactful parameter until performance drops below $P$. The larger the number of inputs that depend on a parameter, the more essential the parameter is to your model. You might have a parameter that memorizes a particularly weird-looking $7$, but that doesn't help at all on all the other inputs. Noising out this parameter will only contribute to the loss on the order of $1/N$, where $N$ is the size of your dataset, and is therefore preferable to noising a parameter that helps the model on a large number of inputs, like identifying [lines or curves](https://distill.pub/2020/circuits/curve-circuits/). We describe the importance of a circuit to the loss as the circuits *efficiency*.
 
 As briefly mentioned above, the temperature that we sample at during SGLD controls the 'tolerance' we have for loss. Specifically, tuning the temperature changes the *sharpness* of the loss landscape that we are traversing. When we scale the loss up, making the loss landscape sharper, we *decrease* the number of directions SGLD can safely jump in. On the other hand, when we soften the loss, making the loss landscape flatter, we *increase* the number of safe directions. By changing the sharpness of our loss landscape, we are able to control the probability of SGLD taking a step in directions that hurt the loss 'more than a little'
 
-In practice, we believe that this means temperature __controls the 'efficiency' of circuits that SGLD is allowed to noise out__. When the temperature is high, SGLD can only move in directions that harm low efficiency circuits. We saw the simplest evidence for this view in our MNIST experiment - memorized points had on average a much higher pLLC, meaning they were harmed more during sampling. As we increased our temperature, we saw
+We believe that this means temperature __controls the 'efficiency' of circuits that SGLD is allowed to noise out__. When the temperature is high, SGLD can only move in directions that harm low efficiency circuits. We saw the simplest evidence for this view in our MNIST experiment - memorized points had on average a much higher pLLC, meaning they were harmed more during sampling. As we increased our temperature, we saw
 
 *Because pure memorization is the *least* efficient type of circuit, below a very high temperature we should expect SGLD to always noise out *some* memorization. Also, because SGLD is implemented using minibatches we will often take sampling steps *without* accounting for the loss on some random input, which means we might step in a direction that completely noises out the circuitry used for memorization regardless of temperature.*
 
-## Renormalization With Temperature
+Renormalization With Temperature
 
-Physics is built on layer upon layer of abstraction - you can talk about fluid dynamics without knowing anything about individual $H_2O$ molecules. We care about rules that govern systems at different levels, and particularly how 'particles' interact at different scales. The description of a system changing depending on the scale at which you observe it is called [*Renormalization*](https://en.wikipedia.org/wiki/Renormalization#:~:text=Renormalization%20is%20a%20collection%20of,effects%20of%20their%20self%2Dinteractions).
+Physics is built on layer upon layer of abstraction - you can talk about fluid dynamics without knowing anything about individual $H_2O$ molecules. We care about rules that govern systems at different levels, and particularly how 'particles' interact at different scales. The description of a system changing depending on the scale at which you observe it is called [Renormalization](https://en.wikipedia.org/wiki/Renormalization#:~:text=Renormalization%20is%20a%20collection%20of,effects%20of%20their%20self%2Dinteractions).
 
-We've saw qualitatively different clustering at different temperatures in the MNIST and modular arithmetic experiments. For us, tuning the temperature allows us to observe structure at different scales - we'd like to think that different temperatures can be thought of as revealing progressive levels of 'abstraction'.
+We've seen qualitatively different clustering at different temperatures in the MNIST and modular arithmetic experiments. Building on our interpretation from above, we'd like to believe that tuning the temperature allows us to observe meaningfully different structure at different scales - maybe different temperatures can be thought of as revealing progressive levels of 'abstraction'.  
 
+Specifically, if the noise-degraded-circuits hypothesis is true, we expect our pLLC values to be dominated by the highest efficiency circuit that our temperature noises out (and which our input makes use of). For example, at a high enough temperature we expect our pLLC values to be an average over SGLD steps which noise out pure memorization circuits, which means they tell us primarily about the complexity of our lowest efficiency circuits. As we lower our temperature, our pLLC values start to be made up of losses from stepping in directions that hurt many inputs, which means they contain information about the complexity of more efficient circuits (which often is more relevant). 
+
+How much info a trace contains about circuits below its temperature-set efficiency cutoff is unclear. While pLLC values, being averages, easily become dominated by the losses of our highest efficiency circuits, traces don't reduce in this as the efficiency of the circuits being noised varies from step to step. Empirically, traces seemed to contain information at varying levels of detail: In the MNIST experiment, we were able to see clustering by whether an input was memorized, fine-grained similarities between inputs, and by input label, all at the same time. 
 
 # What This Might Mean in Circuit-Land
 
@@ -580,9 +581,9 @@ We step back to our original MNIST synthetic memorization task to investigate th
 
 
 <img
-  src="/images/memorization-is-fragile/developmental_and_temp_mnist.png"
+  src="/images/memorization-is-fragile/labeled_mnist_temp_sweep.png"
   alt="LLC vs Sparsity Comparison"
-  className="block w-full max-w-full mt-[70px] mb-[70px] md:w-[200%] md:ml-[-32%] md:max-w-none"
+  className="block w-full max-w-full mt-[70px] mb-[70px] md:w-[180%] md:ml-[-29%] md:max-w-none"
 />
 
 
