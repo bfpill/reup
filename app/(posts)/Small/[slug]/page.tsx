@@ -7,7 +7,7 @@ import { OpenGraph } from "@/lib/og";
 import { notFound } from "next/navigation";
 import { Layout } from "@/components/screens/posts";
 
-const route = "random";
+const route = "Small";
 
 const Posts = getPosts(route);
 
