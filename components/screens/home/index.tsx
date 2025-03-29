@@ -6,7 +6,6 @@ import * as FadeIn from "@/components/motion/staggers/fade";
 import { Posts } from "@/components/posts";
 
 import { Analytics } from "@vercel/analytics/react"
-import { DaysOfSummer } from "@/components/custom/DaysOfSummer";
 import AsciiImageComponent from "@/components/custom/AsciiImage";
 
 
@@ -60,7 +59,7 @@ export default function Home() {
               <Posts category="writing" />
             </FadeIn.Item>
             <FadeIn.Item>
-              <Posts category="smaller stuff" />
+              <Posts category="Smaller Stuff" />
             </FadeIn.Item>
             <Spacer />
           </div>
