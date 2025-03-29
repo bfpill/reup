@@ -39,7 +39,7 @@ export default function Home() {
         <FadeIn.Item>
           <div className="flex justify-between z-10">
             <div>
-              <h1 className="font-lora text-3xl xl:mb-16 mb-0 z-10">Maxwell Adam</h1>
+              <h1 className="font-lora text-3xl xl:mb-16 mb-0 z-10 tracking-tighter">Maxwell Adam</h1>
             </div>
           </div>
         </FadeIn.Item>
@@ -60,7 +60,7 @@ export default function Home() {
               <Posts category="writing" />
             </FadeIn.Item>
             <FadeIn.Item>
-              <Posts category="random" />
+              <Posts category="smaller stuff" />
             </FadeIn.Item>
             <Spacer />
           </div>
