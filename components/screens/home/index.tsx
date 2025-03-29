@@ -60,7 +60,7 @@ export default function Home() {
               <Posts category="writing" />
             </FadeIn.Item>
             <FadeIn.Item>
-              <Posts category="small" />
+              <Posts category="snack_sized" />
             </FadeIn.Item>
             <Spacer />
           </div>
