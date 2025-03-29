@@ -31,7 +31,7 @@ const CurrentlyReading = () => {
   );
 }
 
-// Comment
+
 export default function Home() {
   return (
     <div className="relative p-8 overflow-x-hidden">
@@ -60,7 +60,7 @@ export default function Home() {
               <Posts category="writing" />
             </FadeIn.Item>
             <FadeIn.Item>
-              <Posts category="small" />
+              <Posts category="Small" />
             </FadeIn.Item>
             <Spacer />
           </div>
