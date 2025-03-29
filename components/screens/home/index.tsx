@@ -31,6 +31,7 @@ const CurrentlyReading = () => {
   );
 }
 
+// Comment
 export default function Home() {
   return (
     <div className="relative p-8 overflow-x-hidden">
