@@ -51,9 +51,6 @@ export default function Home() {
           </FadeIn.Item>
           <div className="mt-2 backdrop-blur-xs p-5 rounded-md">
             <FadeIn.Item>
-              <DaysOfSummer />
-            </FadeIn.Item>
-            <FadeIn.Item>
               <Posts category="me" />
             </FadeIn.Item>
             <FadeIn.Item>

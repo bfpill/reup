@@ -5,7 +5,6 @@ time:
   updated: "2025-03-06T06:19:19.634Z"
 ---
 
-
 <img
   src="/images/memorization-is-fragile/post_header.png"
   alt="LLC vs Sparsity Comparison"
@@ -518,7 +517,11 @@ Finally, an incomplete list of some good next steps for the pLLC:
 * Work using pLLC traces to validate a set of SGLD hyperparams as 'correct' and doing what we expect. 
 
 
-<div className='mt-[250px]'/>
+<div className='mt-[100px]'/>
+
+<div className="mt-24 mb-64 text-center">
+  <hr className="w-full mx-auto" />
+</div>
 
 # Appendix
 
@@ -721,4 +724,5 @@ Even though we started with four parameters $(w_1, w_2, w_3, w_4)$, our model re
 This many-to-many mapping between parameter and function space is what it means for a function to be singular. In fancy terms, this means that the Fisher Information Matrix of the model is rank deficient (specifically, it would have rank 2 rather than 4). This means that recovering the *true* parameters of the function that generates our *true* distribution isn't possible. 
 
 It turns out neural networks are inherently [very](https://arxiv.org/abs/2010.11560) singular objects. This makes sense - today's models have LOTS of parameters and commonly use activation functions that threshold inputs below a certain value (ReLU's, etc), both of which make it more likely for a change in parameter to have no (or a very small) effect. We also know well that our networks are dramatically *overparameterized*, i.e. they have many more 'parameters' than the theoretical minimum needed to solve a task. It's important to note that for learning purposes 'overparameterization' is actually often *useful*, and degeneracies can actually help a model learn (out of scope for this post). 
+
 

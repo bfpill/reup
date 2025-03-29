@@ -27,7 +27,6 @@ const renderLorenzAttractor = (sigma, rho, beta, x0, y0, z0, numSteps, width, he
     positions[i * 3 + 2] = z;
   }
 
-  // Use fixed bounds
   const { minX, maxX, minY, maxY } = bounds;
 
   const canvas = Array.from({ length: height }, () => Array.from({ length: width }, () => 0));
@@ -63,9 +62,10 @@ const renderLorenzAttractor = (sigma, rho, beta, x0, y0, z0, numSteps, width, he
 };
 
 const getRandomAsciiChar = () => {
-  const asciiRange = [33, 126];
-  return String.fromCharCode(Math.floor(Math.random() * (asciiRange[1] - asciiRange[0] + 1)) + asciiRange[0]);
+  const letters = ['M', 'A', 'X', 'W', 'E', 'L', 'L'];
+  return letters[Math.floor(Math.random() * letters.length)];
 };
+
 
 const AsciiComponent = () => {
   const sigma = 10;
@@ -75,8 +75,8 @@ const AsciiComponent = () => {
   const y0 = 0.0;
   const z0 = 0.0;
   const timeStepRef = useRef(1);
-  const [width, setWidth] = useState(60);
-  const [height, setHeight] = useState(40);
+  const [width, setWidth] = useState(120);
+  const [height, setHeight] = useState(70);
 
   const [fps, setFps] = useState(0);
   const [angle, setAngle] = useState(0);
@@ -85,7 +85,6 @@ const AsciiComponent = () => {
   const [boardState, setBoardState] = useState<number[][]>([]);
   const animationFrameIdRef = useRef<number | undefined>(undefined);
 
-  // Fixed bounds based on known Lorenz attractor ranges
   const bounds = {
     minX: -40,
     maxX: 40,
@@ -177,7 +176,7 @@ const AsciiComponent = () => {
             onChange={(e) => { setWidth(Number(e.target.value)); setHeight(Number(e.target.value)/2) }}
             className="w-32 h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer dark:bg-gray-700"
             style={{
-              accentColor: '#4A90E2', // Optional: Customize the slider color
+              accentColor: '#4A90E2', 
             }}
           />
           <span className="text-stone-500 text-xs">{width}</span>
