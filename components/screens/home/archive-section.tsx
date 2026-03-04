@@ -27,8 +27,8 @@ function AnimatedAsciiM({
     const img = new Image();
     img.src = imageUrl;
     img.onload = () => {
-      const targetWidth = 100;
-      const targetHeight = 110;
+      const targetWidth = 115;
+      const targetHeight = 127;
 
       canvas.width = targetWidth;
       canvas.height = targetHeight;
@@ -61,7 +61,7 @@ function AnimatedAsciiM({
 
   useEffect(() => {
     if (isExiting && asciiImage.length > 0) {
-      const totalDuration = asciiImage.length * 8 + 200;
+      const totalDuration = asciiImage.length * 15 + 700;
       const timer = setTimeout(onExitComplete, totalDuration);
       return () => clearTimeout(timer);
     }
@@ -76,7 +76,7 @@ function AnimatedAsciiM({
               className="inline-block flex select-none font-mono leading-none"
               key={String(i)}
               animate={isExiting ? {
-                x: 800,
+                x: 1000,
                 opacity: 0,
               } : {}}
               transition={{
@@ -112,28 +112,31 @@ export function ArchiveSection({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <div className="mt-32 min-h-[880px]" style={{ backgroundColor: '#ffffff' }}>
+    <div className="mt-32 min-h-[510px] sm:min-h-[715px] md:min-h-[865px] lg:min-h-[1020px] w-full max-w-5xl mx-auto" style={{ backgroundColor: '#ffffff' }}>
       {state !== 'archive' && (
         <button
           type="button"
           onClick={handleClick}
-          className={`h-24 w-24 cursor-pointer transition-opacity ${
+          className={`w-full cursor-pointer transition-opacity ${
             state === 'idle' ? 'opacity-50 hover:opacity-100' : 'opacity-100'
           }`}
           disabled={state === 'exiting'}
+          style={{ transformOrigin: 'top left' }}
         >
-          <AnimatedAsciiM
-            imageUrl="/images/daily-notes/2024-11-4/M.jpeg"
-            isExiting={state === 'exiting'}
-            onExitComplete={handleExitComplete}
-          />
+          <div className="scale-[0.5] sm:scale-[0.7] md:scale-[0.85] lg:scale-100 origin-top-left">
+            <AnimatedAsciiM
+              imageUrl="/images/daily-notes/2024-11-4/M.jpeg"
+              isExiting={state === 'exiting'}
+              onExitComplete={handleExitComplete}
+            />
+          </div>
         </button>
       )}
       {state === 'archive' && (
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: 0.8, ease: "easeOut" }}
         >
           <h2 className="text-lg mb-4" style={{ color: '#000000' }}>archive</h2>
           {children}

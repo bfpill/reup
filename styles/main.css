@@ -12,10 +12,33 @@
 @import url("@radix-ui/colors/yellow-dark-alpha.css");
 @import url("@radix-ui/colors/black-alpha.css");
 @import url("@radix-ui/colors/white-alpha.css");
+@import url("https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap");
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+.home-content,
+.home-content *:not(.text-blue) {
+  color: #000000 !important;
+}
+
+.home-content .text-blue {
+  color: #2563eb !important;
+}
+
+.home-content a:hover {
+  opacity: 0.6;
+}
+
+.home-content .border-border {
+  border-color: #d1d5db !important;
+}
+
+.gothic-text {
+  font-family: "UnifrakturMaguntia", cursive;
+  font-weight: 400;
+}
 
 @layer base {
   :root {

@@ -68,21 +68,13 @@ const Papers = () => {
 export default function Home() {
   return (
     <div className="flex flex-col" style={{ backgroundColor: '#ffffff' }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=UnifrakturMaguntia&display=swap');
-        html, body { background-color: #ffffff !important; }
-        .home-content, .home-content *:not(.text-blue) { color: #000000 !important; }
-        .home-content .text-blue { color: #2563eb !important; }
-        .home-content a:hover { opacity: 0.6; }
-        .home-content .border-border { border-color: #d1d5db !important; }
-        .gothic-text { font-family: 'UnifrakturMaguntia', cursive; font-weight: 400; }
-      `}</style>
+      <style dangerouslySetInnerHTML={{ __html: "html, body { background-color: #ffffff !important; }" }} />
       <div className="min-h-screen flex items-center justify-center px-8 py-16">
         <FadeIn.Container>
-          <div className="w-full max-w-4xl home-content">
+          <div className="w-full max-w-5xl home-content">
             <div className="flex flex-col md:flex-row gap-8 md:gap-16">
               {/* Left column - 1/3 */}
-              <div className="md:w-2/5 order-1">
+              <div className="md:w-1/3 order-1">
                 <FadeIn.Item>
                   <h1 className="font-lora text-3xl tracking-tighter" style={{ color: '#000000' }}>Maxwell Adam</h1>
                 </FadeIn.Item>
@@ -108,7 +100,7 @@ export default function Home() {
               </div>
               
               {/* Right column - 2/3 */}
-              <div className="md:w-3/5 order-2">
+              <div className="md:w-2/3 order-2">
                 <FadeIn.Item>
                   <Papers />
                 </FadeIn.Item>
@@ -127,7 +119,7 @@ export default function Home() {
       
       <FadeIn.Container>
         <div className="px-8 pb-8 home-content flex flex-col items-center">
-          <div className="w-full max-w-4xl">
+          <div className="w-full max-w-5xl">
             <FadeIn.Item>
               <Footer />
             </FadeIn.Item>
