@@ -2,46 +2,21 @@
 
 import { cn } from "@/lib/cn";
 
-import { ChevronRightIcon } from "@radix-ui/react-icons";
 import { Link } from "next-view-transitions";
-import { usePathname } from "next/navigation";
-import React from "react";
 
-export const Breadcrumb = () => {
-  const pathname = usePathname();
+interface BreadcrumbProps {
+  color?: 'light' | 'dark';
+  text?: string;
+}
 
-  const paths = pathname
-    .split("/")
-    .filter((path) => path !== "")
-    .map((path) => path.replace(/\b\w/g, (char) => char.toUpperCase()));
-
+export const Breadcrumb = ({ color = 'light', text = 'Home' }: BreadcrumbProps) => {
+  const textColor = color === 'light' ? '#ffffff' : '#000000';
+  
   return (
-    <div className={cn("mt-0 mb-4 flex w-full items-center gap-1 align-middle font-normal text-small backdrop-blur-sm rounded-md")}>
-      <Link className="text-muted" href="/">
-        Home
+    <div className={cn("mt-0 mb-4 flex w-full items-center gap-1 align-middle backdrop-blur-sm rounded-md")}>
+      <Link className="font-lora text-3xl tracking-tighter" style={{ color: textColor }} href="/">
+        {text}
       </Link>
-      <ChevronRightIcon className="text-muted" />
-      {paths.map((path, index) => {
-        const href = `/${paths
-          .slice(0, index + 1)
-          .join("/")
-          .toLowerCase()}`;
-
-        const isLast = index === paths.length - 1;
-
-        return (
-          <React.Fragment key={path}>
-            {isLast ? (
-              <span className="text-muted">{path}</span>
-            ) : (
-              <Link className="text-muted" href={href}>
-                {path}
-              </Link>
-            )}
-            {index < paths.length - 1 && <ChevronRightIcon className="text-muted" />}
-          </React.Fragment>
-        );
-      })}
     </div>
   );
 };

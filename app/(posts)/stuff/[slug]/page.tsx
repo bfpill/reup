@@ -52,7 +52,7 @@ export default function Page({ params }: PageProps) {
       <div className="absolute top-0 -left-2 flex w-screen items-center justify-center bg-[#EAF3FF] pt-20 md:pt-0">
         <div className="h-full min-w-[400px] md:min-w-[1150px] overflow-y-auto border-0 md:border">
           <div className="absolute top-10 left-10">
-            <Breadcrumb />
+            <Breadcrumb color="dark" text="Maxwell Adam" />
           </div>
           <div className="h-full w-full">
             <div className="flex h-screen flex-col">
@@ -70,21 +70,15 @@ export default function Page({ params }: PageProps) {
 
   if (params.slug === 'sublevelsets') {
     return (
-      <div className="absolute top-0 -left-2 flex w-screen items-center justify-center bg-[#EAF3FF] pt-20 md:pt-0">
-        <div className="h-full min-w-[400px] md:min-w-[1150px] overflow-y-auto border-0 md:border">
-          <div className="absolute top-10 left-10">
-            <Breadcrumb />
-          </div>
-          <div className="h-full w-full">
-            <div className="flex h-screen flex-col">
-              <iframe
-                src="https://timaeus.co/sublevelsets"
-                className="h-full w-full border-none"
-                title="Embedded Page"
-              />
-            </div>
-          </div>
+      <div className="absolute top-0 left-0 w-screen h-screen" style={{ backgroundColor: '#ffffff' }}>
+        <div className="absolute top-10 left-10 z-10">
+          <Breadcrumb color="dark" text="Maxwell Adam" />
         </div>
+        <iframe
+          src="https://timaeus.co/sublevelsets"
+          className="w-full h-full border-none"
+          title="Embedded Page"
+        />
       </div>
     );
   }

@@ -140,7 +140,7 @@ const AsciiComponent = () => {
   const scale = 50 / width * 5;
 
   return (
-    <div className="relative w-full flex flex-col items-center justify-center">
+    <div className="relative w-full flex flex-col items-center justify-center" style={{ contain: 'content' }}>
       <div className="flex flex-col items-center justify-center text-black h-[26vh] xl:h-[30vh] xl:w-[70vw] w-[80vw] relative">
         <div className="mt-5 scale-[0.7] md:scale-[0.6] xl:scale-[0.8]">
           <div className="relative" style={{ transform: `scale(${scale})` }}>

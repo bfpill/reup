@@ -52,9 +52,8 @@
 
   html {
     scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
-    scrollbar-gutter: stable;
     scrollbar-width: thin;
-    scroll-behavior: smooth;
+    overscroll-behavior: none;
   }
 
   html {
